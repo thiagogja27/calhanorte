@@ -35,6 +35,7 @@ export interface QuoteItem {
 
 export interface Quote {
   id: string;
+  userId?: string;
   customerName: string;
   customerPhone: string;
   customerCompany?: string;
@@ -47,6 +48,7 @@ export interface Quote {
   totalWeightKg: number;
   totalPriceBrl: number;
   notes?: string;
+  createdAt?: string;
 }
 
 export interface ChatMessage {

@@ -5,13 +5,29 @@ import {
   Scale, FileText, Phone, User, Calculator, Bot, Truck, Sparkles, 
   Plus, Trash2, Printer, Download, Search, Building2, HelpCircle, 
   Send, Layers, Table, Share2, CheckCircle2, Calendar, DollarSign, 
-  Hammer, FileSpreadsheet, Percent, Wrench, ShieldAlert
+  Hammer, FileSpreadsheet, Percent, Wrench, ShieldAlert, Lock, Mail, LogOut
 } from 'lucide-react';
 import { SteelProduct, QuoteItem, Quote } from './types';
 import { STEEL_PRODUCTS, TRUCK_OPTIONS, getRecommendedTruck, BITOLA_CONVERSIONS } from './data';
 import AcoCalculator from './components/AcoCalculator';
 import AcoAssistant from './components/AcoAssistant';
 import CalhaTelhaCalculators from './components/CalhaTelhaCalculators';
+
+// Firebase Authentication and Store Imports
+import { auth, db, handleFirestoreError, OperationType } from './firebase';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged, 
+  User as FirebaseUser 
+} from 'firebase/auth';
+import { 
+  ref, 
+  set, 
+  remove, 
+  onValue 
+} from 'firebase/database';
 
 export default function App() {
   const [items, setItems] = useState<QuoteItem[]>([]);
@@ -28,29 +44,105 @@ export default function App() {
   const [freightCost, setFreightCost] = useState<number>(0);
   const [validityDays, setValidityDays] = useState<number>(10);
 
+  // Firebase Authentication states
+  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
+
   // Saved quotes history state
   const [savedQuotes, setSavedQuotes] = useState<Quote[]>([]);
-  const [isHydrated, setIsHydrated] = useState(false);
 
-  // Load savedQuotes from localStorage once on mount safely (Client-side)
+  // Watch Authentication State
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('calha_norte_saved_quotes');
-      if (stored) {
-        setSavedQuotes(JSON.parse(stored));
-      }
-    } catch {
-      // Ignore
-    }
-    setIsHydrated(true);
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      setUser(authUser);
+      setAuthLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
-  // Sync savedQuotes to localStorage only after hydration and when changes occur
+  // Sync savedQuotes from Realtime Database in Real-time
   useEffect(() => {
-    if (isHydrated) {
-      localStorage.setItem('calha_norte_saved_quotes', JSON.stringify(savedQuotes));
+    if (!user) {
+      setSavedQuotes([]);
+      return;
     }
-  }, [savedQuotes, isHydrated]);
+
+    const quotesRef = ref(db, `quotes/${user.uid}`);
+
+    const unsubscribe = onValue(quotesRef, (snapshot) => {
+      const quotes: Quote[] = [];
+      if (snapshot.exists()) {
+        snapshot.forEach((childSnapshot) => {
+          quotes.push(childSnapshot.val() as Quote);
+        });
+      }
+      // Sort on client side to put newest creations first
+      quotes.sort((a, b) => {
+        const dateA = a.createdAt || "";
+        const dateB = b.createdAt || "";
+        return dateB.localeCompare(dateA);
+      });
+      setSavedQuotes(quotes);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, `quotes/${user.uid}`);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Auth execution handlers
+  const handleAuthSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError("");
+    setIsAuthSubmitting(true);
+
+    if (!authEmail || !authPassword) {
+      setAuthError("Preencha todos os campos.");
+      setIsAuthSubmitting(false);
+      return;
+    }
+
+    try {
+      if (isRegisterMode) {
+        await createUserWithEmailAndPassword(auth, authEmail, authPassword);
+      } else {
+        await signInWithEmailAndPassword(auth, authEmail, authPassword);
+      }
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        setAuthError("E-mail ou senha incorretos.");
+      } else if (err.code === 'auth/weak-password') {
+        setAuthError("A senha precisa ter pelo menos 6 caracteres.");
+      } else if (err.code === 'auth/email-already-in-use') {
+        setAuthError("Este e-mail já está cadastrado.");
+      } else if (err.code === 'auth/invalid-email') {
+        setAuthError("E-mail inválido.");
+      } else {
+        setAuthError("Falha na autenticação. Tente novamente.");
+      }
+    } finally {
+      setIsAuthSubmitting(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      setItems([]);
+      setCustomerName("");
+      setCustomerPhone("");
+      setCustomerCompany("");
+      setNotes("");
+    } catch (error) {
+      console.error("Erro ao sair", error);
+    }
+  };
   
   // UI Panels / Navigation
   const [activeTab, setActiveTab] = useState<'quote' | 'catalog' | 'bitolas' | 'ai' | 'calheiros' | 'history'>('quote');
@@ -131,17 +223,24 @@ export default function App() {
   };
 
   // Save the currently constructed quote to history
-  const handleSaveQuoteToHistory = () => {
+  const handleSaveQuoteToHistory = async () => {
     if (items.length === 0) {
       alert("Por favor, adicione pelo menos um material (aço/calha/telha) antes de salvar o orçamento!");
       return;
     }
 
-    const newQuote: Quote = {
-      id: quoteCode || `ORC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+    if (!user) {
+      alert("Você precisa estar autenticado para salvar orçamentos!");
+      return;
+    }
+
+    const targetQuoteCode = quoteCode || `ORC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newQuote = {
+      id: targetQuoteCode,
+      userId: user.uid,
       customerName: customerName || "Consumidor Final",
-      customerPhone: customerPhone,
-      customerCompany: customerCompany,
+      customerPhone: customerPhone || "",
+      customerCompany: customerCompany || "",
       items,
       discountPercent,
       additionPercent,
@@ -150,16 +249,18 @@ export default function App() {
       date: new Date().toLocaleDateString('pt-BR'),
       totalWeightKg,
       totalPriceBrl,
-      notes
+      notes: notes || "",
+      createdAt: new Date().toISOString()
     };
 
-    setSavedQuotes((prev) => {
-      // If a code already exists we replace it, otherwise add to front
-      const filtered = prev.filter(q => q.id !== newQuote.id);
-      return [newQuote, ...filtered];
-    });
-
-    alert(`Sucesso! O orçamento "${newQuote.id}" de "${newQuote.customerName}" foi gravado de forma segura no histórico.`);
+    try {
+      const quotesRef = ref(db, `quotes/${user.uid}/${targetQuoteCode}`);
+      await set(quotesRef, newQuote);
+      alert(`Sucesso em Tempo Real! O orçamento "${targetQuoteCode}" de "${newQuote.customerName}" foi sincronizado com sucesso.`);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `quotes/${user.uid}/${targetQuoteCode}`);
+      alert("Erro ao salvar orçamento no banco de dados.");
+    }
   };
 
   // Load a historic saved quote back into the active workspace
@@ -179,9 +280,15 @@ export default function App() {
   };
 
   // Remove quote from history
-  const handleDeleteSavedQuote = (id: string) => {
+  const handleDeleteSavedQuote = async (id: string) => {
     if (confirm(`Excluir o orçamento "${id}" permanentemente do seu histórico?`)) {
-      setSavedQuotes((prev) => prev.filter(q => q.id !== id));
+      try {
+        const quoteRef = ref(db, `quotes/${user.uid}/${id}`);
+        await remove(quoteRef);
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `quotes/${user.uid}/${id}`);
+        alert("Erro ao excluir o orçamento.");
+      }
     }
   };
 
@@ -264,6 +371,112 @@ export default function App() {
     return matchesSearch && matchesCategory;
   });
 
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-950 text-white font-sans">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500 mx-auto"></div>
+          <p className="text-slate-400 font-medium font-mono text-xs uppercase tracking-widest animate-pulse">Conectando ao Firebase...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-4 font-sans select-none relative overflow-hidden">
+        {/* Background ambient lighting */}
+        <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-orange-500/10 blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 rounded-full bg-slate-500/10 blur-3xl pointer-events-none"></div>
+
+        <div className="w-full max-w-md bg-slate-900 border border-slate-850 rounded-3xl p-6 sm:p-8 shadow-2xl relative z-10">
+          
+          {/* Logo Brand Header */}
+          <div className="text-center mb-8">
+            <div className="mx-auto h-12 w-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center mb-4 shadow-xl shadow-orange-500/20">
+              <Scale className="w-6 h-6 text-slate-950 stroke-[2.5]" />
+            </div>
+            <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white">Calha Norte <span className="text-orange-500 text-sm">PRO</span></h1>
+            <p className="text-xs text-slate-400 mt-1">Cálculos Avançados de Metalurgia & Lançador de Orçamentos</p>
+          </div>
+
+          <form onSubmit={handleAuthSubmit} className="space-y-4">
+            {authError && (
+              <div className="p-3.5 bg-red-500/10 border border-red-500/20 rounded-2xl text-xs text-red-400 flex items-center space-x-2">
+                <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
+                <span>{authError}</span>
+              </div>
+            )}
+
+            <div>
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Endereço de E-mail</label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-550">
+                  <Mail className="w-4 h-4 text-slate-500" />
+                </span>
+                <input
+                  type="email"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  placeholder="exemplo@empresa.com"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-orange-500/40 focus:ring-1 focus:ring-orange-500/25 rounded-2xl py-3 pl-10 pr-4 text-sm text-white placeholder-slate-650 outline-none transition"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Sua Senha</label>
+              <div className="relative">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-550">
+                  <Lock className="w-4 h-4 text-slate-500" />
+                </span>
+                <input
+                  type="password"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-orange-500/40 focus:ring-1 focus:ring-orange-500/25 rounded-2xl py-3 pl-10 pr-4 text-sm text-white placeholder-slate-655 outline-none transition"
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isAuthSubmitting}
+              className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-orange-500/50 text-slate-950 font-black text-sm py-3.5 px-4 rounded-2xl shadow-xl shadow-orange-500/10 hover:shadow-orange-500/20 hover:-translate-y-0.5 active:translate-y-0 transition flex items-center justify-center space-x-2 cursor-pointer"
+            >
+              {isAuthSubmitting ? (
+                <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <>
+                  <span>{isRegisterMode ? "Registrar e Entrar" : "Entrar no Sistema"}</span>
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="mt-6 pt-6 border-t border-slate-850 text-center">
+            <button
+              onClick={() => {
+                setIsRegisterMode(!isRegisterMode);
+                setAuthError("");
+              }}
+              className="text-xs text-orange-400 hover:text-orange-300 font-semibold cursor-pointer underline decoration-dotted underline-offset-4"
+            >
+              {isRegisterMode ? "Já tem registro? Faça login aqui" : "Novo usuário? Registrar nova conta agora"}
+            </button>
+          </div>
+
+        </div>
+
+        {/* Small footer */}
+        <p className="text-[10px] text-slate-650 mt-8">Calha Norte PRO • Bancos de Dados em Tempo Real</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
       
@@ -290,7 +503,12 @@ export default function App() {
             </div>
 
             {/* Quick Summary Widgets */}
-            <div className="flex items-center space-x-3 sm:space-x-6">
+            <div className="flex items-center space-x-3 sm:space-x-4 lg:space-x-6">
+              <div className="hidden sm:flex flex-col text-right bg-slate-950/40 px-3 py-1.5 rounded-xl border border-slate-800/40">
+                <span className="text-[9px] text-slate-500 uppercase font-black tracking-wider">Operador</span>
+                <span className="text-[11px] font-bold text-slate-300 max-w-[130px] truncate">{user.email}</span>
+              </div>
+
               <div className="hidden lg:flex flex-col text-right">
                 <span className="text-[10px] text-slate-400 uppercase font-semibold">Carga do Orçamento Ativo</span>
                 <span className="text-sm font-black text-white flex items-center justify-end space-x-1.5 mt-0.5">
@@ -310,10 +528,18 @@ export default function App() {
                 id="btn-quick-whatsapp"
                 onClick={handleSendWhatsApp}
                 disabled={items.length === 0}
-                className="hidden sm:flex bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 text-xs font-bold px-4 py-2.5 rounded-xl transition items-center space-x-2 whitespace-nowrap"
+                className="hidden md:flex bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 text-xs font-bold px-4 py-2.5 rounded-xl transition items-center space-x-2 whitespace-nowrap cursor-pointer"
               >
                 <Share2 className="w-3.5 h-3.5" />
                 <span>Enviar p/ WhatsApp</span>
+              </button>
+
+              <button
+                onClick={handleSignOut}
+                title="Sair do Sistema"
+                className="bg-slate-850 hover:bg-red-500/20 hover:text-red-400 text-slate-300 text-xs font-bold p-2.5 rounded-xl border border-slate-800 transition flex items-center justify-center cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>

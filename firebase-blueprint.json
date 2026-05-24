@@ -1,0 +1,33 @@
+{
+  "entities": {
+    "Quote": {
+      "title": "Quote",
+      "description": "Orçamento de calhas, telhas e produtos de metalurgia",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerPhone": { "type": "string" },
+        "customerCompany": { "type": "string" },
+        "items": { "type": "array" },
+        "discountPercent": { "type": "number" },
+        "additionPercent": { "type": "number" },
+        "freightCost": { "type": "number" },
+        "validityDays": { "type": "number" },
+        "date": { "type": "string" },
+        "totalWeightKg": { "type": "number" },
+        "totalPriceBrl": { "type": "number" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "customerName", "items", "totalPriceBrl", "createdAt"]
+    }
+  },
+  "firestore": {
+    "quotes/{quoteId}": {
+      "schema": "Quote",
+      "description": "Coleção de orçamentos criados pelos usuários"
+    }
+  }
+}

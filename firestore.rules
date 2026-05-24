@@ -1,0 +1,63 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net: default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation for Quote
+    function isValidQuote(quote) {
+      return quote.id is string && quote.id.size() <= 128
+        && quote.userId is string && quote.userId.size() <= 128
+        && quote.customerName is string && quote.customerName.size() <= 200
+        && quote.customerPhone is string && quote.customerPhone.size() <= 50
+        && quote.items is list
+        && quote.totalPriceBrl is number
+        && quote.totalWeightKg is number;
+    }
+
+    match /quotes/{quoteId} {
+      allow get: if isSignedIn() && isOwner(existing().userId);
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      
+      allow create: if isSignedIn() 
+        && isValidId(quoteId)
+        && isValidQuote(incoming())
+        && isOwner(incoming().userId)
+        && incoming().createdAt == request.time;
+        
+      allow update: if isSignedIn() 
+        && isValidId(quoteId)
+        && isValidQuote(incoming())
+        && isOwner(existing().userId)
+        && isOwner(incoming().userId)
+        && incoming().createdAt == existing().createdAt
+        && (incoming().diff(existing()).affectedKeys().hasOnly(['customerName', 'customerPhone', 'customerCompany', 'items', 'discountPercent', 'additionPercent', 'freightCost', 'validityDays', 'totalWeightKg', 'totalPriceBrl', 'notes', 'date']))
+        ;
+        
+      allow delete: if isSignedIn() && isOwner(existing().userId);
+    }
+  }
+}
