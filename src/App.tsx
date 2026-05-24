@@ -1,23 +1,19 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Scale, FileText, Phone, User, Calculator, Bot, Truck, Sparkles, 
-  Plus, Trash2, Printer, Download, Search, Building2, HelpCircle, 
-  Send, Layers, Table, Share2, CheckCircle2, Calendar, DollarSign, 
-  Hammer, FileSpreadsheet, Percent, Wrench, ShieldAlert, Lock, Mail, LogOut
+  Calculator, History, Scissors, Ruler, Building2, Bot, 
+  Building, Sparkles, Mail, Lock, LogOut, Loader2, CheckCircle2,
+  Bell, Moon, Sun, ChevronRight, Plus, ArrowLeft, Wrench, Users,
+  Phone, MapPin, Camera, Check, Menu, Trash2, Edit3, Printer,
+  Clock, Info, X, ChevronDown, Calendar, DollarSign, AlertCircle,
+  MessageSquareCode, HelpCircle, FileText, Send, SquareTerminal, Scale
 } from 'lucide-react';
-import { SteelProduct, QuoteItem, Quote } from './types';
-import { STEEL_PRODUCTS, TRUCK_OPTIONS, getRecommendedTruck, BITOLA_CONVERSIONS } from './data';
-import AcoCalculator from './components/AcoCalculator';
-import AcoAssistant from './components/AcoAssistant';
-import CalhaTelhaCalculators from './components/CalhaTelhaCalculators';
 
-// Firebase Authentication and Store Imports
-import { auth, db, handleFirestoreError, OperationType } from './firebase';
+// Firebase Authentication and Database Imports
+import { auth, db } from './firebase';
 import { 
   signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
   signOut, 
   onAuthStateChanged, 
   User as FirebaseUser 
@@ -29,93 +25,238 @@ import {
   onValue 
 } from 'firebase/database';
 
-export default function App() {
-  const [items, setItems] = useState<QuoteItem[]>([]);
-  
-  // Sales & customer states
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [customerCompany, setCustomerCompany] = useState("");
-  const [notes, setNotes] = useState("");
-  
-  // Direct adjustment states
-  const [discountPercent, setDiscountPercent] = useState<number>(0);
-  const [additionPercent, setAdditionPercent] = useState<number>(0);
-  const [freightCost, setFreightCost] = useState<number>(0);
-  const [validityDays, setValidityDays] = useState<number>(10);
+// Modular CalhaZap Components
+import CalhaZapHistory from './components/CalhaZapHistory';
+import CalhaZapCorte from './components/CalhaZapCorte';
+import CalhaZapMetro from './components/CalhaZapMetro';
+import CalhaZapPlanos from './components/CalhaZapPlanos';
+import AcoAssistant from './components/AcoAssistant';
 
-  // Firebase Authentication states
+export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
 
-  // Saved quotes history state
-  const [savedQuotes, setSavedQuotes] = useState<Quote[]>([]);
+  // Active workspace settings (mapped to iPhone Viewport Tabs)
+  // 'home' = Dashboard, 'orc' = 5-Step Wizard, 'hist' = Saved List, 'calc' = 2x2 calculators grid, 'emp' = settings/plans/AI
+  const [viewportTab, setViewportTab] = useState<'home' | 'orc' | 'hist' | 'calc' | 'emp' | 'notif'>('home');
 
-  // Watch Authentication State
+  // Selected Active Calculator
+  const [selectedCalc, setSelectedCalc] = useState<null | 'metragem' | 'metro-kg' | 'corte' | 'incline'>(null);
+
+  // Dark/Light Mode state
+  const [darkMode, setDarkMode] = useState(false);
+
+  // Company Details persistent states
+  const [companyName, setCompanyName] = useState('CalhaFer Ltda.');
+  const [ownerName, setOwnerName] = useState('Carlos');
+  const [companyCNPJ, setCompanyCNPJ] = useState('12.345.678/0001-99');
+  const [companyPhone, setCompanyPhone] = useState('(11) 99876-5432');
+  const [companyCityState, setCompanyCityState] = useState('São Paulo - SP');
+  const [companyLogo, setCompanyLogo] = useState(''); // Base64 url
+
+  // Saved quotes from database
+  const [quotes, setQuotes] = useState<any[]>([]);
+
+  // Premium Activation State
+  const [czAtivo, setCzAtivo] = useState(false);
+
+  // Lock Overlay Dialog State
+  const [showLock, setShowLock] = useState(false);
+  const [lockTitle, setLockTitle] = useState('');
+  const [lockSub, setLockSub] = useState('');
+
+  // -------------------------------------------------------------
+  // CUSTOM 5-STEP WIZARD SELECTIONS STATE (for "Novo Orçamento")
+  // -------------------------------------------------------------
+  const [wizardStep, setWizardStep] = useState<number>(1);
+  const [wName, setWName] = useState('');
+  const [wPhone, setWPhone] = useState('');
+  const [wAddress, setWAddress] = useState('');
+  const [wPhoto, setWPhoto] = useState<string | null>(null); // base64 or placeholder preview
+
+  // Step 2 products list (coberturas/telhas)
+  const [wTileItems, setWTileItems] = useState<any[]>([]);
+  const [selTileType, setSelTileType] = useState('Trapézio 25');
+  const [selTileMat, setSelTileMat] = useState('Galvalume');
+  const [tileQty, setTileQty] = useState(12);
+  const [tileLen, setTileLen] = useState(3.5);
+  const [tilePrice, setTilePrice] = useState(38.50);
+
+  // Step 3 products list (calhas/rufos/condutores)
+  const [wGutterItems, setWGutterItems] = useState<any[]>([]);
+  const [selGutterType, setSelGutterType] = useState('Calha Moldura');
+  const [selGutterMat, setSelGutterMat] = useState('Galvalume');
+  const [gutterCut, setGutterCut] = useState(280); // mm
+  const [gutterThick, setGutterThick] = useState('0,43'); // mm
+  const [gutterLen, setGutterLen] = useState(6.0); // meters
+  const [gutterQty, setGutterQty] = useState(2);
+  const [gutterPrice, setGutterPrice] = useState(42.00);
+
+  // Step 3.5 (rufo additions)
+  const [wRufoItems, setWRufoItems] = useState<any[]>([]);
+  const [selRufoType, setSelRufoType] = useState('Rufo Encosto c/ Pingadeira');
+  const [selRufoMat, setSelRufoMat] = useState('Galvalume');
+  const [rufoCut, setRufoCut] = useState(250); // mm
+  const [rufoThick, setRufoThick] = useState('0,43'); // mm
+  const [rufoLen, setRufoLen] = useState(4.0); // meters
+  const [rufoQty, setRufoQty] = useState(3);
+  const [rufoPrice, setRufoPrice] = useState(33.00);
+
+  // Step 4 condutores / chaminé / PU-40 / accessories
+  const [wCondQty, setWCondQty] = useState(2);
+  const [wCondType, setWCondType] = useState('Retangular Galvalume 5x10');
+  const [wCondLen, setWCondLen] = useState(3.0);
+  const [wCondPrice, setWCondPrice] = useState(21.00);
+
+  const [wChamQty, setWChamQty] = useState(1);
+  const [wChamType, setWChamType] = useState('Chaminé de Lareira Galvanizada');
+  const [wChamDiam, setWChamDiam] = useState(150);
+  const [wChamPrice, setWChamPrice] = useState(115.00);
+
+  const [puQty, setPuQty] = useState(2);
+  const [puPrice, setPuPrice] = useState(22.00);
+
+  // Step 5 labor / additional services
+  const [laborPrice, setLaborPrice] = useState(350.00);
+  const [discountPercent, setDiscountPercent] = useState(5);
+  const [wNotes, setWNotes] = useState('Garantia especial de 1 ano contra vazamentos, oxidações e falhas de fixação nas presilhas.');
+
+  // Live Calculations for Wizard
+  const calcWizardTotal = () => {
+    let sub = 0;
+    wTileItems.forEach(it => sub += it.total);
+    wGutterItems.forEach(it => sub += it.total);
+    wRufoItems.forEach(it => sub += it.total);
+    sub += wCondQty * wCondPrice * wCondLen;
+    sub += wChamQty * wChamPrice;
+    sub += puQty * puPrice;
+    sub += laborPrice;
+
+    const discAmount = sub * (discountPercent / 100);
+    const finalTot = Math.max(0, sub - discAmount);
+
+    return {
+      subtotal: sub,
+      discountAmount: discAmount,
+      total: finalTot
+    };
+  };
+
+  const { subtotal: wSubtotal, discountAmount: wDiscAmount, total: wTotal } = calcWizardTotal();
+
+  // -------------------------------------------------------------
+  // INTERACTIVE INLINE SPECIALTY CALCULATORS STATE (Under calculated sub-page)
+  // -------------------------------------------------------------
+  // Inclinação
+  const [incRoofLen, setIncRoofLen] = useState<number>(4);
+  const [incRoofPercent, setIncRoofPercent] = useState<number>(20);
+  // Metragem manual calculator
+  const [metWidthVal, setMetWidthVal] = useState<number>(5);
+  const [metLengthVal, setMetLengthVal] = useState<number>(8);
+  const [metPitchCoeff, setMetPitchCoeff] = useState<number>(1.04); // for 30% slope overhang
+
+  // -------------------------------------------------------------
+  // INTERACTIVE NOTIFICATIONS ALARM STATE
+  // -------------------------------------------------------------
+  const [notifs, setNotifs] = useState([
+    { id: '1', type: 'approved', title: 'Orçamento aprovado', desc: 'Ana Rodrigues aprovou o orçamento de R$ 2.450,00 para instalação.', time: 'Há 15 min', read: false },
+    { id: '2', type: 'comment', title: 'Comentário sobre obra', desc: 'Construtora JB comentou no projeto de slitting #042 do corte 30.', time: 'Há 1 hora', read: false },
+    { id: '3', type: 'reminder', title: 'Lembrete de instalação', desc: 'Instalação de Calhas na rua das Palmeiras agendada para amanhã às 14h00.', time: 'Há 3 horas', read: false },
+    { id: '4', type: 'payment', title: 'Instrução de Pix Recebida', desc: 'Marcos Ferreira realizou adiantamento de 50% (R$ 1.890,00).', time: 'Ontem', read: true },
+    { id: '5', type: 'expiring', title: 'Orçamento expirando', desc: 'Cotação de bobinas pré-pintadas #038 vencerá em 2 dias.', time: 'Ontem', read: true },
+    { id: '6', type: 'whatsapp', title: 'Mensagem do WhatsApp', desc: 'Renata Costa enviou confirmação do frete das chapas de alumínio.', time: '2 dias atrás', read: true }
+  ]);
+
+  const unreadCount = notifs.filter(n => !n.read).length;
+
+  const markAllNotifsRead = () => {
+    setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+  };
+
+  const removeNotif = (id: string) => {
+    setNotifs(prev => prev.filter(n => n.id !== id));
+  };
+
+  // -------------------------------------------------------------
+  // SYNC AUTH, COMPANY AND QUOTES FROM FIREBASE DATABASE
+  // -------------------------------------------------------------
   useEffect(() => {
-    // Fail-safe: if Firebase auth doesn't resolve in 1.5 seconds (e.g. standard iframe privacy policies),
-    // stop the load spinner so the login screen can be rendered.
-    console.log("Iniciando monitoramento de autenticação Firebase...");
     const timer = setTimeout(() => {
-      console.warn("Auth initialization timed out (iframe security fallback). Rendering login shell.");
       setAuthLoading(false);
-    }, 1500);
+    }, 1200);
 
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
-      console.log("Mudança de estado obtida para o usuário:", authUser?.email || "Nenhum usuário logado");
       clearTimeout(timer);
       setUser(authUser);
       setAuthLoading(false);
     });
+
+    try {
+      const mode = localStorage.getItem('cz_dark_mode') === 'true';
+      setDarkMode(mode);
+    } catch (_) {}
+
     return () => {
       clearTimeout(timer);
       unsubscribe();
     };
   }, []);
 
-  // Sync savedQuotes from Realtime Database in Real-time
   useEffect(() => {
     if (!user) {
-      setSavedQuotes([]);
+      setQuotes([]);
       return;
     }
 
-    const quotesRef = ref(db, `quotes/${user.uid}`);
-
-    const unsubscribe = onValue(quotesRef, (snapshot) => {
-      const quotes: Quote[] = [];
+    // Sync Company Details
+    const companyRef = ref(db, `companies/${user.uid}`);
+    const unsubCompany = onValue(companyRef, (snapshot) => {
       if (snapshot.exists()) {
-        snapshot.forEach((childSnapshot) => {
-          quotes.push(childSnapshot.val() as Quote);
-        });
+        const val = snapshot.val();
+        if (val.name) setCompanyName(val.name);
+        if (val.cnpj) setCompanyCNPJ(val.cnpj);
+        if (val.phone) setCompanyPhone(val.phone);
+        if (val.cityState) setCompanyCityState(val.cityState);
+        if (val.logo) setCompanyLogo(val.logo);
+        if (val.owner) setOwnerName(val.owner);
       }
-      // Sort on client side to put newest creations first
-      quotes.sort((a, b) => {
-        const dateA = a.createdAt || "";
-        const dateB = b.createdAt || "";
-        return dateB.localeCompare(dateA);
-      });
-      setSavedQuotes(quotes);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, `quotes/${user.uid}`);
     });
 
-    return () => unsubscribe();
+    // Sync Quotes
+    const quotesRef = ref(db, `quotes/${user.uid}`);
+    const unsubQuotes = onValue(quotesRef, (snapshot) => {
+      const arr: any[] = [];
+      if (snapshot.exists()) {
+        snapshot.forEach((child) => {
+          arr.push(child.val());
+        });
+      }
+      setQuotes(arr.reverse()); // Put newest first
+    });
+
+    try {
+      const ok = localStorage.getItem('cz_ativo') === '1';
+      setCzAtivo(ok);
+    } catch (_) {}
+
+    return () => {
+      unsubCompany();
+      unsubQuotes();
+    };
   }, [user]);
 
-  // Auth execution handlers
+  // Auth Functions
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError("");
     setIsAuthSubmitting(true);
 
     if (!authEmail || !authPassword) {
-      setAuthError("Preencha todos os campos.");
+      setAuthError("Forneça e-mail e senha cadastrados.");
       setIsAuthSubmitting(false);
       return;
     }
@@ -124,17 +265,7 @@ export default function App() {
       await signInWithEmailAndPassword(auth, authEmail, authPassword);
     } catch (err: any) {
       console.error(err);
-      if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
-        setAuthError("E-mail ou senha incorretos.");
-      } else if (err.code === 'auth/weak-password') {
-        setAuthError("A senha precisa ter pelo menos 6 caracteres.");
-      } else if (err.code === 'auth/email-already-in-use') {
-        setAuthError("Este e-mail já está cadastrado.");
-      } else if (err.code === 'auth/invalid-email') {
-        setAuthError("E-mail inválido.");
-      } else {
-        setAuthError("Falha na autenticação. Tente novamente.");
-      }
+      setAuthError("Erro de logon. Verifique as credenciais.");
     } finally {
       setIsAuthSubmitting(false);
     }
@@ -143,1439 +274,1784 @@ export default function App() {
   const handleSignOut = async () => {
     try {
       await signOut(auth);
-      setItems([]);
-      setCustomerName("");
-      setCustomerPhone("");
-      setCustomerCompany("");
-      setNotes("");
-    } catch (error) {
-      console.error("Erro ao sair", error);
-    }
-  };
-  
-  // UI Panels / Navigation
-  const [activeTab, setActiveTab] = useState<'quote' | 'catalog' | 'bitolas' | 'ai' | 'calheiros' | 'history'>('quote');
-  const [searchText, setSearchText] = useState("");
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
-
-  // Modern UI Modal States
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
-  const [quoteCode, setQuoteCode] = useState("");
-
-  // Re-generate a cute code on loading/editing
-  useEffect(() => {
-    if (!quoteCode) {
-      const num = Math.floor(1000 + Math.random() * 9000);
-      const year = new Date().getFullYear();
-      setQuoteCode(`ORC-${year}-${num}`);
-    }
-  }, [quoteCode]);
-
-  // Aggregate Calculations
-  const totalWeightKg = items.reduce((sum, item) => sum + item.calculatedWeightKg, 0);
-  const subtotalPrice = items.reduce((sum, item) => sum + item.totalPrice, 0);
-  
-  const discountAmount = subtotalPrice * (discountPercent / 100);
-  const additionAmount = subtotalPrice * (additionPercent / 100);
-  const totalPriceBrl = Math.max(0, subtotalPrice - discountAmount + additionAmount + freightCost);
-
-  const recommendedTruck = getRecommendedTruck(totalWeightKg);
-
-  // Add Item callback from Calculator component
-  const handleAddItem = (newItem: Omit<QuoteItem, "id">) => {
-    const itemWithId: QuoteItem = {
-      ...newItem,
-      id: Math.random().toString(36).substring(2, 9)
-    };
-    setItems((prev) => [...prev, itemWithId]);
-  };
-
-  // Remove Item
-  const handleRemoveItem = (id: string) => {
-    setItems((prev) => prev.filter(item => item.id !== id));
-  };
-
-  // Clear current quote workspace
-  const handleClearQuote = () => {
-    if (confirm("Tem certeza que deseja zerar a lista de materiais do orçamento atual?")) {
-      setItems([]);
-      setDiscountPercent(0);
-      setAdditionPercent(0);
-      setFreightCost(0);
-      setQuoteCode("");
+    } catch (e) {
+      console.error(e);
     }
   };
 
-  // Start an entirely new quote from scratch
-  const handleNewQuoteInit = (quiet = false) => {
-    if (!quiet && items.length > 0 && !confirm("Deseja mesmo iniciar um NOVO orçamento do zero? Os itens atuais não salvos serão descartados.")) {
-      return;
+  const toggleDarkMode = () => {
+    const next = !darkMode;
+    setDarkMode(next);
+    try {
+      localStorage.setItem('cz_dark_mode', String(next));
+    } catch (_) {}
+  };
+
+  // Premium Activation
+  const verificarAtivo = (): boolean => {
+    try {
+      const val = localStorage.getItem('cz_ativo') === '1';
+      setCzAtivo(val);
+      return val;
+    } catch (_) {
+      return false;
     }
-    setItems([]);
-    setCustomerName("");
-    setCustomerPhone("");
-    setCustomerCompany("");
-    setNotes("");
-    setDiscountPercent(0);
-    setAdditionPercent(0);
-    setFreightCost(0);
-    setValidityDays(10);
+  };
+
+  const exibirLock = (ttl: string, sub: string) => {
+    setLockTitle(ttl);
+    setLockSub(sub);
+    setShowLock(true);
+  };
+
+  const ativarAcessoPlano = (plMode: string) => {
+    try {
+      localStorage.setItem('cz_ativo', '1');
+      setCzAtivo(true);
+    } catch (_) {}
+    setShowLock(false);
+    alert("Pronto! Recursos Premium Ativados com Sucesso! Aproveite.");
+  };
+
+  // Data Actions
+  const handleSaveDocToCloud = async (payload: any) => {
+    if (!user) return;
+    try {
+      const docRef = ref(db, `quotes/${user.uid}/${payload.id}`);
+      await set(docRef, payload);
+    } catch (e) {
+      console.error(e);
+      alert("Falha ao salvar no banco Firebase.");
+    }
+  };
+
+  const handleToggleQuoteStatus = async (id: string, newStatus: string) => {
+    if (!user) return;
+    try {
+      const statusRef = ref(db, `quotes/${user.uid}/${id}/status`);
+      await set(statusRef, newStatus);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeleteQuoteId = async (id: string) => {
+    if (!user) return;
+    if (!confirm("Confirmar deleção permanente deste orçamento?")) return;
+    try {
+      const docRef = ref(db, `quotes/${user.uid}/${id}`);
+      await remove(docRef);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const saveCompanyConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    try {
+      const companyRef = ref(db, `companies/${user.uid}`);
+      await set(companyRef, {
+        name: companyName,
+        cnpj: companyCNPJ,
+        phone: companyPhone,
+        cityState: companyCityState,
+        logo: companyLogo,
+        owner: ownerName
+      });
+      alert("Definições atualizadas na nuvem!");
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleEditLoad = (oldQuote: any) => {
+    setWName(oldQuote.customerName || '');
+    setWPhone(oldQuote.customerPhone || '');
+    setWAddress(oldQuote.customerAddress || '');
+    setWTileItems(oldQuote.telhas || []);
+    setWGutterItems(oldQuote.calhas || []);
+    setWRufoItems(oldQuote.rufos || []);
+    setLaborPrice(oldQuote.laborPrice || 350.00);
+    setDiscountPercent(oldQuote.discountPercent || 0);
+    setWNotes(oldQuote.notes || '');
     
-    // Generate a brand new quote code
-    const num = Math.floor(1000 + Math.random() * 9000);
-    const year = new Date().getFullYear();
-    setQuoteCode(`ORC-${year}-${num}`);
-    
-    if (!quiet) {
-      alert("Painel limpo! Um novo orçamento em branco foi iniciado.");
-    }
+    setWizardStep(1);
+    setViewportTab('orc');
   };
 
-  // Save the currently constructed quote to history
-  const handleSaveQuoteToHistory = async () => {
-    if (items.length === 0) {
-      alert("Por favor, adicione pelo menos um material (aço/calha/telha) antes de salvar o orçamento!");
+  // Direct Printer Trigger
+  const handleDirectPrintReprnt = (oldQuote: any) => {
+    const printWin = window.open('', '_blank');
+    if (!printWin) {
+      alert("Por favor, habilite popups de impressão!");
+      return;
+    }
+    const clientNm = oldQuote.customerName || "Cliente";
+    const logoImgHtml = companyLogo ? `<img src="${companyLogo}" style="max-height: 52px; margin-bottom: 8px;" />` : '';
+
+    const allItems: any[] = [];
+    if (oldQuote.telhas) oldQuote.telhas.forEach((it: any) => allItems.push(it));
+    if (oldQuote.calhas) oldQuote.calhas.forEach((it: any) => allItems.push(it));
+    if (oldQuote.rufos) oldQuote.rufos.forEach((it: any) => allItems.push(it));
+    if (oldQuote.condutores) {
+      allItems.push({
+        desc: 'Condutores Pluviais Tubulagem',
+        specs: `Comprimento acumulado: 12m`,
+        qtd: oldQuote.condutores.qtd || 2,
+        unit: oldQuote.condutores.unit || 21.00,
+        total: oldQuote.condutores.total || 126.00
+      });
+    }
+
+    const rowsHtml = allItems.map(item => `
+      <tr style="border-bottom: 1px solid #b0b2b5; font-size: 11px;">
+        <td style="padding: 6px; font-weight: bold; color: #1a1a1a;">${item.desc}<div style="font-size: 9px; font-weight: normal; color: #6a6a6a;">${item.specs || ''}</div></td>
+        <td style="padding: 6px; text-align: center; font-family: monospace;">${item.qtd}</td>
+        <td style="padding: 6px; text-align: right; font-family: monospace;">R$ ${item.unit.toFixed(2)}</td>
+        <td style="padding: 6px; text-align: right; font-family: monospace; font-weight: bold;">R$ ${item.total.toFixed(2)}</td>
+      </tr>
+    `).join('');
+
+    printWin.document.write(`
+      <html>
+        <head>
+          <title>Orçamento_${clientNm}</title>
+          <style>
+            body { font-family: 'Helvetica', system-ui, sans-serif; background: #ffffff; color: #1a1a1a; margin: 25px; }
+            .header-tbl { width: 100%; border-bottom: 3px solid #f5c800; padding-bottom: 12px; margin-bottom: 15px; }
+            .client-tbl { width: 100%; margin-bottom: 20px; border-collapse: collapse; }
+            .client-tbl td { padding: 6px; font-size: 11px; }
+            .items-tbl { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+            .items-tbl th { background: #111215; color: #fff; padding: 8px; font-size: 10px; text-transform: uppercase; }
+            .footer-tbl { width: 100%; font-size: 11px; margin-top: 30px; border-top: 1px solid #b0b2b5; padding-top: 15px; }
+          </style>
+        </head>
+        <body>
+          <table class="header-tbl">
+            <tr>
+              <td>
+                ${logoImgHtml}
+                <div style="font-size: 16px; font-weight: bold; color: #111215;">${companyName}</div>
+                <div style="font-size: 11px; color: #3a3a3a;">CNPJ: ${companyCNPJ} • Contato: ${companyPhone} • ${companyCityState}</div>
+              </td>
+              <td style="text-align: right; vertical-align: top;">
+                <div style="font-size: 14px; font-weight: bold; color: #d97706;">PROPOSTA COMERCIAL</div>
+                <div style="font-size: 11px; font-family: monospace; color: #5a5c5f; margin-top: 4px;">Ref: ${oldQuote.id}</div>
+              </td>
+            </tr>
+          </table>
+
+          <table class="client-tbl" border="1" bordercolor="#e4e4e7">
+            <tr style="background-color: #f4f4f5; font-weight: bold;">
+              <td colspan="2" style="font-size: 10px; text-transform: uppercase;">Cliente e Endereço da Obra</td>
+            </tr>
+            <tr>
+              <td><strong>Cliente:</strong> ${clientNm}</td>
+              <td><strong>WhatsApp:</strong> ${oldQuote.customerPhone || '—'}</td>
+            </tr>
+            <tr>
+              <td colspan="2"><strong>Localidade:</strong> ${oldQuote.customerAddress || 'Oficina / Balcão'}</td>
+            </tr>
+          </table>
+
+          <table class="items-tbl">
+            <thead>
+              <tr style="background-color: #1a1a1a;">
+                <th style="text-align: left; color: #fff; padding: 8px;">Especificação Chapas / Produtos</th>
+                <th style="color: #fff; padding: 8px;">Medidas</th>
+                <th style="text-align: right; color: #fff; padding: 8px;">Preço Unit</th>
+                <th style="text-align: right; color: #fff; padding: 8px;">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+
+          <div style="float: right; width: 280px; font-size: 12px; border: 1px solid #e4e4e7; padding: 12px; border-radius: 8px; background: #fafafa;">
+            <table width="100%">
+              <tr>
+                <td>Subtotal Serviços:</td>
+                <td style="text-align: right; font-family: monospace;">R$ ${oldQuote.subtotal.toFixed(2)}</td>
+              </tr>
+              ${oldQuote.discountPercent > 0 ? `
+              <tr>
+                <td style="color: #ca8a04;">Desconto (${oldQuote.discountPercent}%):</td>
+                <td style="text-align: right; color: #ca8a04; font-family: monospace;">- R$ ${oldQuote.discountAmount?.toFixed(2) || '0.00'}</td>
+              </tr>
+              ` : ''}
+              <tr style="font-weight: bold; font-size: 14px; border-top: 2px solid #111215; color:#16a34a;">
+                <td style="padding-top: 6px;">TOTAL LIQUIDO:</td>
+                <td style="text-align: right; padding-top: 6px; font-family: monospace;">R$ ${oldQuote.total.toFixed(2)}</td>
+              </tr>
+            </table>
+          </div>
+          <div style="clear: both;"></div>
+          <div style="margin-top: 50px; font-size: 10px; color: #71717a; border-top:1px solid #e4e4e7; pt-4">
+             Observações: ${oldQuote.notes || 'Materiais para fixação inclusos.'}
+             <br /><br />
+             Assinatura do Responsável Calheiro: _________________________________________________
+          </div>
+        </body>
+      </html>
+    `);
+    printWin.document.close();
+    printWin.focus();
+    setTimeout(() => { printWin.print(); }, 800);
+  };
+
+  // Simulated Media Upload
+  const triggerMockUpload = () => {
+    alert("Simulando câmera do iPhone! Foto da obra carregada com sucesso.");
+    setWPhoto("https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&auto=format&fit=crop");
+  };
+
+  // Add Item actions to Step arrays
+  const addTileToStep = () => {
+    const area = tileQty * tileLen;
+    const tot = area * tilePrice;
+    setWTileItems([...wTileItems, {
+      id: Date.now().toString(),
+      desc: `Telha ${selTileType} ${selTileMat}`,
+      specs: `${tileQty} un x ${tileLen}m = ${area.toFixed(1)}m²`,
+      qtd: tileQty,
+      unit: tilePrice,
+      total: tot
+    }]);
+    alert("Telha adicionada ao orçamento!");
+  };
+
+  const addGutterToStep = () => {
+    const tot = gutterLen * gutterQty * gutterPrice;
+    setWGutterItems([...wGutterItems, {
+      id: Date.now().toString(),
+      desc: `${selGutterType} (${selGutterMat})`,
+      specs: `Corte ${gutterCut}mm • Esp ${gutterThick}mm • ${gutterLen}m`,
+      qtd: gutterQty,
+      unit: gutterPrice,
+      total: tot
+    }]);
+    alert("Calha adicionada!");
+  };
+
+  const addRufoToStep = () => {
+    const tot = rufoLen * rufoQty * rufoPrice;
+    setWRufoItems([...wRufoItems, {
+      id: Date.now().toString(),
+      desc: `${selRufoType} (${selRufoMat})`,
+      specs: `Corte ${rufoCut}mm • Esp ${rufoThick}mm • ${rufoLen}m`,
+      qtd: rufoQty,
+      unit: rufoPrice,
+      total: tot
+    }]);
+    alert("Rufo adicionado!");
+  };
+
+  // Save Wizard Action to Firebase Database
+  const saveWizardBudget = async () => {
+    if (!wName.trim()) {
+      alert("Por favor, preencha o nome do cliente.");
       return;
     }
 
-    if (!user) {
-      alert("Você precisa estar autenticado para salvar orçamentos!");
-      return;
-    }
-
-    const targetQuoteCode = quoteCode || `ORC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
-    const newQuote = {
-      id: targetQuoteCode,
-      userId: user.uid,
-      customerName: customerName || "Consumidor Final",
-      customerPhone: customerPhone || "",
-      customerCompany: customerCompany || "",
-      items,
-      discountPercent,
-      additionPercent,
-      freightCost,
-      validityDays,
+    const payload = {
+      id: "CZ-" + Math.floor(10000 + Math.random() * 90000).toString(),
+      customerName: wName,
+      customerPhone: wPhone,
+      customerAddress: wAddress,
       date: new Date().toLocaleDateString('pt-BR'),
-      totalWeightKg,
-      totalPriceBrl,
-      notes: notes || "",
+      status: "pendente",
+      telhas: wTileItems,
+      calhas: wGutterItems,
+      rufos: wRufoItems,
+      puQty: puQty,
+      puPrice: puPrice,
+      condutores: {
+        desc: wCondType,
+        qtd: wCondQty,
+        unit: wCondPrice,
+        total: wCondQty * wCondPrice * wCondLen
+      },
+      chamines: [{
+        desc: wChamType,
+        specs: `Ø ${wChamDiam}mm`,
+        qtd: wChamQty,
+        unit: wChamPrice,
+        total: wChamQty * wChamPrice
+      }],
+      subtotal: wSubtotal,
+      discountPercent: discountPercent,
+      discountAmount: wDiscAmount,
+      total: wTotal,
+      notes: wNotes,
       createdAt: new Date().toISOString()
     };
 
-    try {
-      const quotesRef = ref(db, `quotes/${user.uid}/${targetQuoteCode}`);
-      await set(quotesRef, newQuote);
-      alert(`Sucesso em Tempo Real! O orçamento "${targetQuoteCode}" de "${newQuote.customerName}" foi sincronizado com sucesso.`);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `quotes/${user.uid}/${targetQuoteCode}`);
-      alert("Erro ao salvar orçamento no banco de dados.");
-    }
+    await handleSaveDocToCloud(payload);
+    alert(`🎉 Sucesso! Orçamento cadastrado na nuvem com o código ${payload.id}`);
+    
+    // Auto redirect to history list to view or print
+    setWName('');
+    setWPhone('');
+    setWAddress('');
+    setWTileItems([]);
+    setWGutterItems([]);
+    setWRufoItems([]);
+    setViewportTab('hist');
   };
 
-  // Load a historic saved quote back into the active workspace
-  const handleLoadQuote = (quote: Quote) => {
-    setQuoteCode(quote.id);
-    setCustomerName(quote.customerName || "");
-    setCustomerPhone(quote.customerPhone || "");
-    setCustomerCompany(quote.customerCompany || "");
-    setNotes(quote.notes || "");
-    setItems(quote.items || []);
-    setDiscountPercent(quote.discountPercent || 0);
-    setAdditionPercent(quote.additionPercent || 0);
-    setFreightCost(quote.freightCost || 0);
-    setValidityDays(quote.validityDays || 10);
-    
-    setActiveTab('quote'); // Return active panel to quote view
-  };
-
-  // Remove quote from history
-  const handleDeleteSavedQuote = async (id: string) => {
-    if (confirm(`Excluir o orçamento "${id}" permanentemente do seu histórico?`)) {
-      try {
-        const quoteRef = ref(db, `quotes/${user.uid}/${id}`);
-        await remove(quoteRef);
-      } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `quotes/${user.uid}/${id}`);
-        alert("Erro ao excluir o orçamento.");
-      }
-    }
-  };
-
-  // Generate serialized WhatsApp message with proper formatting
-  const handleSendWhatsApp = () => {
-    if (items.length === 0) {
-      alert("Adicione pelo menos um item de aço antes de compartilhar!");
-      return;
-    }
-
-    const customerInfo = customerName 
-      ? `*Cliente:* ${customerName}${customerCompany ? ` (${customerCompany})` : ''}\n` 
-      : '';
-    const phoneInfo = customerPhone ? `*Contato:* ${customerPhone}\n` : '';
-    
-    let message = `*📊 PROPOSTA COMERCIAL - ${quoteCode}*\n`;
-    message += `*Calha Norte* - Gerdau / CSN\n`;
-    message += `-------------------------------------------\n`;
-    message += customerInfo;
-    message += phoneInfo;
-    message += `*Data:* ${new Date().toLocaleDateString('pt-BR')}\n`;
-    message += `*Validade:* ${validityDays} dias\n\n`;
-    message += `*🛍️ MATERIAIS SOLICITADOS:*\n`;
-
-    items.forEach((item, index) => {
-      let sizingLabel = '';
-      if (item.product.category === 'sheets') {
-        sizingLabel = `${item.thicknessMm?.toFixed(2)}mmx${item.widthM?.toFixed(1)}mx${item.lengthM?.toFixed(1)}m`;
-      } else if (item.product.category === 'tubes') {
-        sizingLabel = `Chapa ${item.thicknessMm?.toFixed(2)}mm x Barra de ${item.lengthM?.toFixed(1)}m`;
-      } else if (item.product.category === 'calhas_telhas') {
-        sizingLabel = `Corte/Vão: ${item.lengthM?.toFixed(1)}m x Medida: ${item.widthM?.toFixed(2)}m (Esp: ${item.thicknessMm?.toFixed(2)}mm)`;
-      } else if (item.lengthM) {
-        sizingLabel = `Barra de ${item.lengthM?.toFixed(1)}m`;
-      }
-
-      message += `${index + 1}. *${item.product.name}*\n`;
-      message += `   Qtd: ${item.quantity} un | Dimensões: ${sizingLabel || 'Padrão'}\n`;
-      message += `   Peso Total: ${item.calculatedWeightKg.toFixed(2)} kg | R$/kg: R$ ${item.unitPrice.toFixed(2)}\n`;
-      message += `   Subtotal: R$ ${item.totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n\n`;
-    });
-
-    message += `-------------------------------------------\n`;
-    message += `*Subtotal:* R$ ${subtotalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
-    if (discountPercent > 0) message += `*Desconto (-${discountPercent}%):* R$ ${discountAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
-    if (additionPercent > 0) message += `*Acréscimo (+${additionPercent}%):* R$ ${additionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
-    if (freightCost > 0) message += `*Frete Rodoviário:* R$ ${freightCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
-    message += `*💰 TOTAL DO ORÇAMENTO:* R$ ${totalPriceBrl.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
-    message += `*⚖️ PESO TOTAL DA CARGA:* ${totalWeightKg.toFixed(2)} kg\n`;
-    message += `*🚚 Logística sugerida:* ${recommendedTruck.name} (Capac. máx ${recommendedTruck.maxWeightKg}kg)\n`;
-    
-    if (notes) {
-      message += `\n*Observações:* ${notes}\n`;
-    }
-    
-    message += `\n_Gerado de forma digital pela Calha Norte._`;
-
-    const encodedText = encodeURIComponent(message);
-    const cleanPhone = customerPhone.replace(/\D/g, "");
-    
-    // Fallback if no specific phone is given
-    const url = cleanPhone 
-      ? `https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${encodedText}`
-      : `https://api.whatsapp.com/send?text=${encodedText}`;
-      
-    window.open(url, '_blank');
-  };
-
-  // Print function directly targeting document or window
-  const triggerBrowserPrint = () => {
-    window.print();
-  };
-
-  // Catalog filtered products
-  const filteredCatalog = STEEL_PRODUCTS.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchText.toLowerCase()) || 
-                          p.standards.toLowerCase().includes(searchText.toLowerCase()) || 
-                          p.description.toLowerCase().includes(searchText.toLowerCase());
-    const matchesCategory = selectedCategoryFilter === "all" || p.category === selectedCategoryFilter;
-    return matchesSearch && matchesCategory;
-  });
-
+  // Render Spinner Screen
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-950 text-white font-sans">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500 mx-auto"></div>
-          <p className="text-slate-400 font-medium font-mono text-xs uppercase tracking-widest animate-pulse">Conectando ao Firebase...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-4 font-sans select-none relative overflow-hidden">
-        {/* Background ambient lighting */}
-        <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-orange-500/10 blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-96 h-96 rounded-full bg-slate-500/10 blur-3xl pointer-events-none"></div>
-
-        <div className="w-full max-w-md bg-slate-900 border border-slate-850 rounded-3xl p-6 sm:p-8 shadow-2xl relative z-10">
-          
-          {/* Logo Brand Header */}
-          <div className="text-center mb-8">
-            <div className="mx-auto h-12 w-12 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center mb-4 shadow-xl shadow-orange-500/20">
-              <Scale className="w-6 h-6 text-slate-950 stroke-[2.5]" />
-            </div>
-            <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wider text-white">Calha Norte <span className="text-orange-500 text-sm">PRO</span></h1>
-            <p className="text-xs text-slate-400 mt-1">Cálculos Avançados de Metalurgia & Lançador de Orçamentos</p>
-          </div>
-
-          <form onSubmit={handleAuthSubmit} className="space-y-4">
-            {authError && (
-              <div className="p-3.5 bg-red-500/10 border border-red-500/20 rounded-2xl text-xs text-red-400 flex items-center space-x-2">
-                <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
-                <span>{authError}</span>
-              </div>
-            )}
-
-            <div>
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Endereço de E-mail</label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-550">
-                  <Mail className="w-4 h-4 text-slate-500" />
-                </span>
-                <input
-                  type="email"
-                  value={authEmail}
-                  onChange={(e) => setAuthEmail(e.target.value)}
-                  placeholder="exemplo@empresa.com"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-orange-500/40 focus:ring-1 focus:ring-orange-500/25 rounded-2xl py-3 pl-10 pr-4 text-sm text-white placeholder-slate-650 outline-none transition"
-                  required
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Sua Senha</label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-550">
-                  <Lock className="w-4 h-4 text-slate-500" />
-                </span>
-                <input
-                  type="password"
-                  value={authPassword}
-                  onChange={(e) => setAuthPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-orange-500/40 focus:ring-1 focus:ring-orange-500/25 rounded-2xl py-3 pl-10 pr-4 text-sm text-white placeholder-slate-655 outline-none transition"
-                  required
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isAuthSubmitting}
-              className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-orange-500/50 text-slate-950 font-black text-sm py-3.5 px-4 rounded-2xl shadow-xl shadow-orange-500/10 hover:shadow-orange-500/20 hover:-translate-y-0.5 active:translate-y-0 transition flex items-center justify-center space-x-2 cursor-pointer"
-            >
-              {isAuthSubmitting ? (
-                <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                <>
-                  <span>Entrar no Sistema</span>
-                </>
-              )}
-            </button>
-          </form>
-
-        </div>
-
-        {/* Small footer */}
-        <p className="text-[10px] text-slate-650 mt-8">Calha Norte PRO • Bancos de Dados em Tempo Real</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-white font-sans">
+        <Loader2 className="w-10 h-10 animate-spin text-amber-400 mb-4" />
+        <span className="font-condensed font-black tracking-widest uppercase text-xs text-stone-400 animate-pulse">
+          Sincronizando Oficina CalhaZap...
+        </span>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-sans">
+    <div className={`min-h-screen bg-slate-950 flex flex-col items-center justify-center p-0 md:p-6 transition-colors duration-300 font-sans ${darkMode ? 'dark text-zinc-100' : 'text-zinc-900'}`}>
       
-      {/* PROFESSIONAL UPPER BAR HEADER */}
-      <header className="bg-slate-900 border-b border-slate-950 text-white sticky top-0 z-40 print:hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-row items-center justify-between gap-4">
-            
-            {/* Branding with steel aesthetics */}
-            <div className="flex items-center space-x-3">
-              <div className="h-10 w-10 sm:h-11 sm:w-11 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-orange-500/25">
-                <Hammer className="w-5 h-5 sm:w-5.5 sm:h-5.5 text-slate-950 stroke-[2.5]" />
-              </div>
-              <div>
-                <div className="flex items-center space-x-1.5">
-                  <h1 className="text-base sm:text-xl font-black uppercase tracking-wider text-white">Calha Norte</h1>
-                  <span className="bg-orange-500/15 text-orange-400 border border-orange-500/20 text-[9px] sm:text-[10px] font-black tracking-widest px-1.5 py-0.5 rounded uppercase">PRO</span>
+      {/* Absolute Header for Desktop View only */}
+      <div className="hidden md:flex items-center gap-6 justify-between w-full max-w-4xl px-4 py-3 border-b border-zinc-800/60 mb-6 font-mono text-xs text-zinc-500 shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>CalhaZap Cloud: Conectado</span>
+          <span className="mx-2">|</span>
+          <span className="text-zinc-400 font-semibold">{user ? user.email : 'Aguardando Logon'}</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="bg-amber-400/20 text-amber-300 uppercase px-2 py-0.5 rounded text-[10px] font-bold border border-amber-500/30">
+            {czAtivo ? '⭐ PLANO PREMIUM ATIVO' : 'TRIAL ATIVO - 10 DIAS'}
+          </span>
+          {user && (
+            <button 
+              onClick={handleSignOut}
+              className="flex items-center gap-1.5 px-2 py-1 bg-zinc-800 text-zinc-300 hover:text-white rounded border border-zinc-700 hover:border-zinc-500 transition cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Desconectar</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Interactive Smartphone Chassis Mockup Wrapper */}
+      <div className="w-full md:max-w-[420px] md:h-[860px] bg-zinc-100 dark:bg-black md:rounded-[44px] md:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95)] border-0 md:border-[10px] md:border-zinc-800 relative flex flex-col overflow-hidden transition-all duration-300">
+        
+        {/* iPhone Native Header: Battery, Signal, Dynamic Island */}
+        <div className="bg-zinc-100 dark:bg-black text-black dark:text-white px-5 pt-3 pb-2 flex justify-between items-center text-[11px] font-bold z-30 shrink-0 select-none border-b border-zinc-200/50 dark:border-zinc-900/60 font-mono">
+          <span>14:20</span>
+          
+          {/* Dynamic Island Notch */}
+          <div className="w-24 h-4.5 bg-black rounded-full absolute left-1/2 -translate-x-1/2 top-2.5 flex items-center justify-end pr-3 border border-zinc-900 shadow-inner">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-900 animate-ping"></span>
+          </div>
+          
+          <div className="flex items-center gap-1.5">
+            <Wrench className="w-3 h-3 text-zinc-400 shrink-0" />
+            <span className="text-zinc-400 font-normal">84%</span>
+            <div className="w-5 h-2.5 rounded-sm bg-zinc-300 dark:bg-zinc-800 border border-zinc-400 dark:border-zinc-700 p-0.5 flex">
+              <div className="h-full w-[84%] bg-green-500 rounded-2xs"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Dynamic App Area inside Smartphone Viewport */}
+        <div className={`flex-grow flex flex-col overflow-y-auto no-scrollbar relative transition-colors duration-300 ${
+          darkMode ? 'bg-zinc-950 text-white' : 'bg-stone-50 text-stone-900'
+        }`}>
+          
+          {/* USER NOT AUTHENTICATED: Native Phone Form Login */}
+          {!user ? (
+            <div className="flex-grow flex flex-col p-6 justify-center items-center">
+              <div className="text-center space-y-2 mb-6">
+                <div className="w-14 h-14 bg-amber-400 rounded-2xl flex items-center justify-center mx-auto shadow-md">
+                  <SquareTerminal className="w-8 h-8 text-slate-900 stroke-[2.5]" />
                 </div>
-                <p className="text-[10px] sm:text-xs text-slate-400 flex items-center space-x-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse shrink-0"></span>
-                  <span className="truncate max-w-[140px] sm:max-w-none">Gerdau & CSN</span>
+                <h1 className="text-2xl font-black font-condensed uppercase tracking-wide">CalhaZap</h1>
+                <p className="text-xs text-zinc-400 max-w-xs mx-auto">
+                  Painel Exclusivo de Orçamentos e Cálculos de Chapas, Bobinas, Calhas e Rufos
                 </p>
               </div>
-            </div>
 
-            {/* Quick Summary Widgets */}
-            <div className="flex items-center space-x-3 sm:space-x-4 lg:space-x-6">
-              <div className="hidden sm:flex flex-col text-right bg-slate-950/40 px-3 py-1.5 rounded-xl border border-slate-800/40">
-                <span className="text-[9px] text-slate-500 uppercase font-black tracking-wider">Operador</span>
-                <span className="text-[11px] font-bold text-slate-300 max-w-[130px] truncate">{user.email}</span>
-              </div>
-
-              <div className="hidden lg:flex flex-col text-right">
-                <span className="text-[10px] text-slate-400 uppercase font-semibold">Carga do Orçamento Ativo</span>
-                <span className="text-sm font-black text-white flex items-center justify-end space-x-1.5 mt-0.5">
-                  <Scale className="w-4 h-4 text-orange-400" />
-                  <span>{totalWeightKg.toFixed(2)} kg</span>
-                </span>
-              </div>
-              <div className="flex flex-col text-right">
-                <span className="text-[9px] sm:text-[10px] text-slate-400 uppercase font-semibold">Valor Estimado</span>
-                <span className="text-xs sm:text-sm font-black text-orange-400 flex items-center justify-end space-x-1 mt-0.5 font-mono">
-                  R$ {totalPriceBrl.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </span>
-              </div>
-              
-              {/* Desktop view primary sharing */}
-              <button
-                id="btn-quick-whatsapp"
-                onClick={handleSendWhatsApp}
-                disabled={items.length === 0}
-                className="hidden md:flex bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 text-xs font-bold px-4 py-2.5 rounded-xl transition items-center space-x-2 whitespace-nowrap cursor-pointer"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-                <span>Enviar p/ WhatsApp</span>
-              </button>
-
-              <button
-                onClick={handleSignOut}
-                title="Sair do Sistema"
-                className="bg-slate-850 hover:bg-red-500/20 hover:text-red-400 text-slate-300 text-xs font-bold p-2.5 rounded-xl border border-slate-800 transition flex items-center justify-center cursor-pointer"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Dynamic Responsive Tab Selector Navigation */}
-        <div className="bg-slate-950 border-t border-slate-900">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <nav className="flex flex-wrap md:flex-nowrap gap-1.5 md:gap-1 py-3 text-xs sm:text-[13px] font-bold">
-              <button
-                id="tabnav-quote"
-                onClick={() => setActiveTab('quote')}
-                className={`px-3 sm:px-4 py-2 rounded-xl transition whitespace-nowrap flex items-center space-x-1.5 sm:space-x-2 ${
-                  activeTab === 'quote' 
-                    ? 'bg-slate-800 text-white border-b-2 border-orange-500' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Calculator className="w-4 h-4 text-orange-400" />
-                <span>Painel de Orçamento ({items.length})</span>
-              </button>
-
-              <button
-                id="tabnav-catalog"
-                onClick={() => setActiveTab('catalog')}
-                className={`px-3 sm:px-4 py-2 rounded-xl transition whitespace-nowrap flex items-center space-x-1.5 sm:space-x-2 ${
-                  activeTab === 'catalog' 
-                    ? 'bg-slate-800 text-white border-b-2 border-orange-500' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Layers className="w-4 h-4 text-orange-450" />
-                <span>Catálogo de Produtos</span>
-              </button>
-
-              <button
-                id="tabnav-bitolas"
-                onClick={() => setActiveTab('bitolas')}
-                className={`px-3 sm:px-4 py-2 rounded-xl transition whitespace-nowrap flex items-center space-x-1.5 sm:space-x-2 ${
-                  activeTab === 'bitolas' 
-                    ? 'bg-slate-800 text-white border-b-2 border-orange-500' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Table className="w-4 h-4 text-blue-400" />
-                <span>Tabela de Bitolas</span>
-              </button>
-
-              <button
-                id="tabnav-calheiros"
-                onClick={() => setActiveTab('calheiros')}
-                className={`px-3 sm:px-4 py-2 rounded-xl transition whitespace-nowrap flex items-center space-x-1.5 sm:space-x-2 ${
-                  activeTab === 'calheiros' 
-                    ? 'bg-slate-800 text-white border-b-2 border-orange-500' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Wrench className="w-4 h-4 text-amber-500" />
-                <span>Calha & Telha PRO</span>
-              </button>
-
-              <button
-                id="tabnav-history"
-                onClick={() => setActiveTab('history')}
-                className={`px-3 sm:px-4 py-2 rounded-xl transition whitespace-nowrap flex items-center space-x-1.5 sm:space-x-2 ${
-                  activeTab === 'history' 
-                    ? 'bg-slate-800 text-white border-b-2 border-orange-500' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-                <span className="flex items-center space-x-1">
-                  <span>Consultar Clientes</span>
-                  <span className="bg-emerald-500/20 text-emerald-400 font-bold px-1.5 py-0.5 rounded-full text-[10px] scale-90">
-                    {savedQuotes.length}
-                  </span>
-                </span>
-              </button>
-
-              <button
-                id="tabnav-ai"
-                onClick={() => setActiveTab('ai')}
-                className={`px-3 sm:px-4 py-2 rounded-xl transition whitespace-nowrap flex items-center space-x-1.5 sm:space-x-2 ${
-                  activeTab === 'ai' 
-                    ? 'bg-slate-800 text-white border-b-2 border-orange-500 text-orange-350' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Bot className="w-4 h-4 text-orange-400 animate-pulse" />
-                <span>AssisteAço AI Expert</span>
-              </button>
-            </nav>
-          </div>
-        </div>
-      </header>
-
-      {/* CORE WORKSPACE PORTAL */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 print:py-0">
-        
-        {/* TAB 1: ELABORAR ORÇAMENTO COM CALCULADORA */}
-        {activeTab === 'quote' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            
-            {/* Column A: Calculator (WidthSpan 5/12) */}
-            <div className="lg:col-span-5 h-full">
-              <AcoCalculator onAddItem={handleAddItem} />
-            </div>
-
-            {/* Column B: Active Quote Detail (WidthSpan 7/12) */}
-            <div className="lg:col-span-7 space-y-6">
-              
-              {/* WORKSPACE CARD BLOCK */}
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                <div className="px-6 py-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-                  <div>
-                    <h3 className="font-extrabold text-slate-900 flex items-center space-x-2">
-                      <FileText className="w-5 h-5 text-orange-500" />
-                      <span>Itens Solicitados nesta Cotação</span>
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-1">Identificação: <span className="font-bold text-slate-700">{quoteCode}</span></p>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <button
-                      id="btn-new-quote-init-header"
-                      onClick={() => handleNewQuoteInit(false)}
-                      className="text-xs font-bold text-orange-600 hover:text-white bg-orange-50 hover:bg-orange-500 border border-orange-200 hover:border-orange-500 px-3 py-1.5 rounded-xl transition flex items-center space-x-1"
-                      title="Salvar o orçamento atual primeiro se necessário antes de limpar."
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Fazer Outro</span>
-                    </button>
-
-                    {items.length > 0 && (
-                      <button
-                        id="btn-clear-entire-quote"
-                        onClick={handleClearQuote}
-                        className="text-xs font-bold text-red-600 hover:text-red-750 bg-red-50 hover:bg-red-100 border border-red-105 px-3 py-1.5 rounded-xl transition"
-                      >
-                        Limpar Tudo
-                      </button>
-                    )}
+              <form onSubmit={handleAuthSubmit} className="w-full space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500 uppercase block">E-mail Corporativo</label>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      value={authEmail}
+                      onChange={(e) => setAuthEmail(e.target.value)}
+                      placeholder="Ex: thiago@calhazap.com"
+                      className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl pl-9 pr-3 py-3 text-xs font-semibold outline-none text-[#1a1a1a] dark:text-white"
+                      required
+                    />
+                    <Mail className="w-4 h-4 text-zinc-400 absolute left-3 top-3.5 shrink-0" />
                   </div>
                 </div>
 
-                {items.length === 0 ? (
-                  <div className="p-12 text-center space-y-4">
-                    <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto text-slate-400">
-                      <Calculator className="w-8 h-8" />
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500 uppercase block">Senha de Segurança</label>
+                  <div className="relative">
+                    <input
+                      type="password"
+                      value={authPassword}
+                      onChange={(e) => setAuthPassword(e.target.value)}
+                      placeholder="Sua senha numérica"
+                      className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl pl-9 pr-3 py-3 text-xs font-semibold outline-none text-[#1a1a1a] dark:text-white"
+                      required
+                    />
+                    <Lock className="w-4 h-4 text-zinc-400 absolute left-3 top-3.5 shrink-0" />
+                  </div>
+                </div>
+
+                {authError && (
+                  <div className="p-3 bg-red-100 dark:bg-red-950/40 border border-red-250 text-red-700 dark:text-red-300 text-xs font-semibold rounded-xl leading-normal text-center">
+                    ⚠️ {authError}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isAuthSubmitting}
+                  className="w-full py-3.5 bg-amber-400 hover:bg-amber-500 active:scale-95 text-slate-900 rounded-xl font-bold text-xs transition uppercase tracking-wider shadow cursor-pointer disabled:opacity-50"
+                >
+                  {isAuthSubmitting ? "Carregando..." : "Entrar na Oficina Segura ✅"}
+                </button>
+              </form>
+
+              <div className="mt-8 pt-4 border-t border-zinc-200 dark:border-zinc-900 text-[10px] text-center text-zinc-500 font-semibold px-2">
+                Acesso limitado a colaboradores e serralherias autorizadas CalhaZap.
+              </div>
+            </div>
+          ) : (
+            
+            // USER AUTHENTICATED: CORE APPLICATION WORKSPACE PANELS
+            <div className="flex flex-col h-full">
+
+              {/* Viewport Top App Bar Header Menu */}
+              {viewportTab !== 'notif' && (
+                <div className={`px-4 py-3.5 flex justify-between items-center shrink-0 border-b ${
+                  darkMode ? 'border-zinc-900 bg-zinc-950/80' : 'border-zinc-200 bg-white/80'
+                } backdrop-blur-sm sticky top-0 z-20`}>
+                  
+                  <div className="flex items-center gap-2.5">
+                    {/* Head Initials Circle Badge */}
+                    <div className="w-10 h-10 rounded-full bg-amber-500 border border-amber-600/20 text-slate-950 flex items-center justify-center font-black font-condensed tracking-tighter text-sm shadow-sm select-none">
+                      CS
                     </div>
-                    <div className="max-w-md mx-auto">
-                      <h4 className="font-bold text-slate-800 text-sm">Nenhum item adicionado ainda</h4>
-                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                        Configure a espessura, diâmetro ou comprimentos do aço desejado utilizando a calculadora interativa ao lado e clique em <strong>"Inserir no Orçamento Ativo"</strong>.
-                      </p>
+                    <div>
+                      <h2 className="text-xs font-semibold text-zinc-400 leading-none">Boa tarde, Carlos!</h2>
+                      <span className="font-bold text-sm tracking-tight leading-normal block text-amber-500 truncate max-w-[150px]">
+                        {companyName}
+                      </span>
                     </div>
                   </div>
-                ) : (
-                  <div className="divide-y divide-slate-100 lg:max-h-[460px] overflow-y-auto">
-                    {items.map((item) => (
-                      <div key={item.id} className="p-4 sm:p-5 hover:bg-slate-50/50 transition flex items-start justify-between gap-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-xs uppercase font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
-                              {item.product.category === 'sheets' ? 'Chapa' : 
-                               item.product.category === 'tubes' ? 'Tubo' : 
-                               item.product.category === 'profiles' ? 'Perfil/Viga' : 
-                               item.product.category === 'rebar' ? 'Vergalhão' : 
-                               item.product.category === 'calhas_telhas' ? 'Calha/Telha' : 'Tela/Arame'}
-                            </span>
-                            <span className="text-xs font-semibold text-slate-500">{item.product.standards}</span>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {/* Theme Mode Toggle Button */}
+                    <button 
+                      onClick={toggleDarkMode}
+                      className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                        darkMode ? 'bg-zinc-900 text-amber-400 hover:bg-zinc-850' : 'bg-stone-100 text-zinc-600 hover:bg-stone-200'
+                      }`}
+                    >
+                      {darkMode ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
+                    </button>
+
+                    {/* Alarm Bells Notification Button */}
+                    <button 
+                      onClick={() => setViewportTab('notif')}
+                      className={`p-2 rounded-lg transition-colors relative cursor-pointer ${
+                        darkMode ? 'bg-zinc-900 text-zinc-300 hover:bg-zinc-850' : 'bg-stone-100 text-zinc-600 hover:bg-stone-200'
+                      }`}
+                    >
+                      <Bell className="w-4.5 h-4.5" />
+                      {unreadCount > 0 && (
+                        <span className="absolute top-1 right-1.5 w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* VIEWPORT CONTROLLER SWITCHBOARD */}
+              <div className="flex-grow p-4 pb-20">
+
+                {/* TAB 1: Dashboard Home Tab */}
+                {viewportTab === 'home' && (
+                  <div className="space-y-4 animate-fade-in">
+                    
+                    {/* Top Calendary Greeting metadata */}
+                    <div className="space-y-0.5">
+                      <span className="text-[11px] font-bold text-zinc-400 tracking-wide uppercase">
+                        Quarta-feira, 24 de maio
+                      </span>
+                      <h3 className="text-xl font-extrabold tracking-tight">
+                        O que vamos fazer hoje?
+                      </h3>
+                    </div>
+
+                    {/* Novo Orçamento Mega Banner Gradient Card */}
+                    <div 
+                      onClick={() => {
+                        setWizardStep(1);
+                        setViewportTab('orc');
+                      }}
+                      className="cursor-pointer bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 p-4 rounded-3xl text-zinc-950 flex justify-between items-center shadow-lg shadow-amber-500/15 relative overflow-hidden group select-none transition-all border border-amber-300/20 active:scale-98"
+                    >
+                      <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:scale-125 transition-all"></div>
+                      
+                      <div className="flex items-center gap-3.5 z-10">
+                        <div className="w-11 h-11 bg-white/25 rounded-2xl flex items-center justify-center shadow-inner">
+                          <Plus className="w-5.5 h-5.5 stroke-[3.5] text-zinc-950" />
+                        </div>
+                        <div>
+                          <h4 className="font-black text-[15px] leading-snug tracking-tight">Novo Orçamento</h4>
+                          <p className="text-[10px] font-bold text-zinc-900/80">Crie um orçamento em 2 minutos</p>
+                        </div>
+                      </div>
+
+                      <ChevronRight className="w-5 h-5 text-zinc-950 group-hover:translate-x-1 transition-transform" />
+                    </div>
+
+                    {/* Rounded Action Column Chips Grid */}
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold font-condensed">
+                      <div 
+                        onClick={() => setViewportTab('hist')}
+                        className={`p-3 rounded-2xl flex flex-col items-center justify-center gap-1 cursor-pointer transition active:scale-95 border ${
+                          darkMode ? 'bg-zinc-900 hover:bg-zinc-850 border-zinc-800' : 'bg-white hover:bg-zinc-50 border-zinc-200'
+                        }`}
+                      >
+                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                          <Wrench className="w-4 h-4" />
+                        </div>
+                        <span className="text-[11px] tracking-wider uppercase">Obras</span>
+                      </div>
+
+                      <div 
+                        onClick={() => {
+                          setWizardStep(1);
+                          setViewportTab('orc');
+                        }}
+                        className={`p-3 rounded-2xl flex flex-col items-center justify-center gap-1 cursor-pointer transition active:scale-95 border ${
+                          darkMode ? 'bg-zinc-900 hover:bg-zinc-850 border-zinc-800' : 'bg-white hover:bg-zinc-50 border-zinc-200'
+                        }`}
+                      >
+                        <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
+                          <Users className="w-4 h-4" />
+                        </div>
+                        <span className="text-[11px] tracking-wider uppercase">Clientes</span>
+                      </div>
+
+                      <div 
+                        onClick={() => setViewportTab('emp')}
+                        className={`p-3 rounded-2xl flex flex-col items-center justify-center gap-1 cursor-pointer transition active:scale-95 border ${
+                          darkMode ? 'bg-zinc-900 hover:bg-zinc-850 border-zinc-800' : 'bg-white hover:bg-zinc-50 border-zinc-200'
+                        }`}
+                      >
+                        <div className="w-8 h-8 rounded-full bg-stone-100 text-stone-600 flex items-center justify-center">
+                          <Menu className="w-4 h-4" />
+                        </div>
+                        <span className="text-[11px] tracking-wider uppercase">Mais</span>
+                      </div>
+                    </div>
+
+                    {/* Section: "Para Hoje" Scheduled list */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center font-bold">
+                        <span className="text-xs uppercase tracking-wider text-zinc-500">Agendamentos</span>
+                        <button onClick={() => alert("Sua Agenda de Serviços está synced com Google Calendar.")} className="text-xs text-amber-500 cursor-pointer">Agenda</button>
+                      </div>
+
+                      <div className="space-y-2">
+                        {/* Event A */}
+                        <div className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
+                          darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+                        }`}>
+                          <div className="flex items-center gap-3">
+                            <span className="px-2.5 py-1.5 bg-amber-100 text-amber-800 rounded-xl text-[10px] font-black font-condensed">14h00</span>
+                            <div>
+                              <h5 className="text-xs font-bold">Ana Rodrigues</h5>
+                              <p className="text-[10px] text-zinc-500">Instalação • Calha + Rufo</p>
+                            </div>
                           </div>
-                          
-                          <h4 className="font-bold text-slate-850 text-sm leading-tight">{item.product.name}</h4>
-                          
-                          {/* Dimensions visual metrics */}
-                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 pt-1">
-                            {item.product.category === 'sheets' && (
-                              <>
-                                <span>Espessura: <strong>{item.thicknessMm?.toFixed(2)} mm</strong></span>
-                                <span>Dimensão: <strong>{item.widthM?.toFixed(1)}m x {item.lengthM?.toFixed(1)}m</strong></span>
-                              </>
-                            )}
-                            {item.product.category === 'calhas_telhas' && (
-                              <>
-                                <span>Esp: <strong>{item.thicknessMm?.toFixed(2)} mm</strong></span>
-                                <span>Espec: <strong>{item.lengthM?.toFixed(1)}m x {item.widthM?.toFixed(2)}m</strong></span>
-                              </>
-                            )}
-                            {item.product.category === 'tubes' && (
-                              <>
-                                <span>Parede: <strong>{item.thicknessMm?.toFixed(2)} mm</strong></span>
-                                <span>Barra: <strong>{item.lengthM?.toFixed(1)} m</strong></span>
-                                {item.outerDiameterMm && <span>Diâmetro: <strong>{item.outerDiameterMm?.toFixed(1)} mm</strong></span>}
-                              </>
-                            )}
-                            {(item.product.category === 'profiles' || item.product.category === 'rebar') && (
-                              <span>Comprimento da Barra: <strong>{item.lengthM?.toFixed(1)} m</strong></span>
-                            )}
-                            <span>Peso do lote: <strong className="text-slate-900 font-mono">{item.calculatedWeightKg.toFixed(2)} kg</strong></span>
+                          <span className="text-[9px] bg-yellow-100/50 text-yellow-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider select-none shrink-0 border border-yellow-250">PENDENTE</span>
+                        </div>
+
+                        {/* Event B */}
+                        <div className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
+                          darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+                        }`}>
+                          <div className="flex items-center gap-3">
+                            <span className="px-2.5 py-1.5 bg-sky-100 text-sky-800 rounded-xl text-[10px] font-black font-condensed">16h30</span>
+                            <div>
+                              <h5 className="text-xs font-bold">Construtora JB</h5>
+                              <p className="text-[10px] text-zinc-500">Vistoria • Estrutura de slitting</p>
+                            </div>
                           </div>
-                          
-                          <div className="pt-1.5 text-xs">
-                            <span className="text-slate-500">Unidades:</span> <strong className="text-slate-800">{item.quantity} un</strong>
-                            <span className="text-slate-300 mx-1.5">|</span>
-                            <span className="text-slate-500">Negociado:</span> <strong className="text-slate-800">R$ {item.unitPrice.toFixed(2)}/kg</strong>
+                          <span className="text-[9px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider select-none shrink-0 border border-blue-200">AGENDADO</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Section Summary quick counters (3 grids) */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className={`p-3 rounded-2xl text-center border ${
+                        darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+                      }`}>
+                        <div className="text-lg font-black font-condensed text-blue-500">7</div>
+                        <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wide">Obras Ativas</div>
+                      </div>
+                      <div className={`p-3 rounded-2xl text-center border ${
+                        darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+                      }`}>
+                        <div className="text-lg font-black font-condensed text-amber-500">12</div>
+                        <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wide">Orçamentos</div>
+                      </div>
+                      <div className={`p-3 rounded-2xl text-center border ${
+                        darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+                      }`}>
+                        <div className="text-lg font-black font-condensed text-emerald-500">3</div>
+                        <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wide">Aprovados</div>
+                      </div>
+                    </div>
+
+                    {/* Saved quotes feed summary */}
+                    <div className="space-y-2 pb-6">
+                      <div className="flex justify-between items-center font-bold">
+                        <span className="text-xs uppercase tracking-wider text-zinc-500">Últimos Orçamentos</span>
+                        <button onClick={() => setViewportTab('hist')} className="text-xs text-amber-500 cursor-pointer">Ver todos</button>
+                      </div>
+
+                      <div className="space-y-2">
+                        {quotes.length === 0 ? (
+                          <div className={`text-center p-6 border border-dashed rounded-2xl text-xs text-zinc-400 font-bold ${
+                            darkMode ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-200 bg-white'
+                          }`}>
+                            Sem orçamentos no banco de dados.
+                          </div>
+                        ) : (
+                          quotes.slice(0, 3).map((q, idx) => (
+                            <div 
+                              key={q.id}
+                              className={`p-3 rounded-2xl border flex justify-between items-center transition-all ${
+                                darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+                              }`}
+                            >
+                              <div>
+                                <h5 className="text-xs font-bold tracking-tight">{q.customerName}</h5>
+                                <span className="text-[9px] font-mono font-bold text-zinc-500">{q.id} • {q.date}</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-xs font-black font-condensed block text-zinc-900 dark:text-zinc-100">
+                                  R$ {q.total?.toFixed(2) || '0.00'}
+                                </span>
+                                <span className={`text-[8px] px-1 py-0.5 rounded font-black uppercase ${
+                                  q.status === 'pago' ? 'bg-emerald-100 text-emerald-800' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'
+                                }`}>
+                                  {q.status}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
+                )}
+
+                {/* TAB 2: STEP-BY-STEP QUOTE WIZARD FORM */}
+                {viewportTab === 'orc' && (
+                  <div className="space-y-4 animate-fade-in pb-10">
+                    
+                    {/* Progress Segment Indicators block */}
+                    <div className="space-y-2.5">
+                      <div className="flex justify-between items-center text-xs font-bold text-zinc-400 select-none">
+                        <span>Etapa {wizardStep} de 5</span>
+                        <span className="text-amber-500">
+                          {wizardStep === 1 && 'Dados do Cliente'}
+                          {wizardStep === 2 && 'Chapas & Cobertura'}
+                          {wizardStep === 3 && 'Calhas e Rufos'}
+                          {wizardStep === 4 && 'Conexões & Vedação'}
+                          {wizardStep === 5 && 'Serviços e Conclusão'}
+                        </span>
+                      </div>
+
+                      {/* Bar Indicators Segment */}
+                      <div className="grid grid-cols-5 gap-1">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <div 
+                            key={s} 
+                            className={`h-1.5 rounded-full transition-all duration-300 ${
+                              s <= wizardStep ? 'bg-amber-500 shadow-sm' : 'bg-zinc-300 dark:bg-zinc-800'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* STEP 1: CLIENT DETAILS AND PHOTO */}
+                    {wizardStep === 1 && (
+                      <div className="space-y-4">
+                        <div className="space-y-0.5">
+                          <h3 className="text-base font-extrabold">Identifique o Cliente</h3>
+                          <p className="text-xs text-zinc-400">Adicione os dados cadastrais da proposta</p>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-zinc-400">Nome do Cliente</label>
+                            <div className="relative">
+                              <input 
+                                type="text"
+                                value={wName}
+                                onChange={(e) => setWName(e.target.value)}
+                                placeholder="Nome completo"
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 rounded-xl px-3.5 py-2.5 pl-9 pr-3 text-xs font-semibold outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 text-[#1a1a1a] dark:text-white"
+                              />
+                              <Users className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3 shrink-0" />
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-zinc-400">Telefone / WhatsApp</label>
+                            <div className="relative">
+                              <input 
+                                type="text"
+                                value={wPhone}
+                                onChange={(e) => setWPhone(e.target.value)}
+                                placeholder="Ex: (11) 99999-8888"
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 rounded-xl px-3.5 py-2.5 pl-9 pr-3 text-xs font-semibold outline-none focus:border-amber-400 text-[#1a1a1a] dark:text-white"
+                              />
+                              <Phone className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3.5 shrink-0" />
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-zinc-405">Endereço da Obra</label>
+                            <div className="relative">
+                              <input 
+                                type="text"
+                                value={wAddress}
+                                onChange={(e) => setWAddress(e.target.value)}
+                                placeholder="Rua, número, bairro e cidade"
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 rounded-xl px-3.5 py-2.5 pl-9 pr-3 text-xs font-semibold outline-none focus:border-amber-400 text-[#1a1a1a] dark:text-white"
+                              />
+                              <MapPin className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3.5 shrink-0" />
+                            </div>
+                          </div>
+
+                          {/* Foto da Obra Dash upload box (Matches screenshot 5) */}
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-zinc-400">Foto da Obra (Opcional)</label>
+                            <div 
+                              onClick={triggerMockUpload}
+                              className="cursor-pointer border-2 border-dashed border-zinc-300 dark:border-zinc-800 rounded-2xl p-5 hover:bg-zinc-50 dark:hover:bg-zinc-900 flex flex-col items-center justify-center gap-2 text-center text-[11px] font-bold text-zinc-500"
+                            >
+                              <Camera className="w-6 h-6 text-zinc-450 stroke-[2] animate-bounce" />
+                              <div>
+                                <span className="text-zinc-650 dark:text-zinc-300">Foto da Obra</span>
+                                <p className="text-[10px] text-zinc-500 font-normal mt-0.5">Clique para simular câmera do iPhone</p>
+                              </div>
+                            </div>
+                            
+                            {wPhoto && (
+                              <div className="relative rounded-2xl border bg-white border-zinc-300 text-zinc-800 p-2 text-xs flex gap-3.5 items-center">
+                                <img src={wPhoto} className="w-12 h-12 object-cover rounded-lg" alt="Obra" />
+                                <div className="flex-grow">
+                                  <span className="font-bold block">obra_01.jpeg</span>
+                                  <span className="text-[10px] text-zinc-500">240 KB • Sucedido</span>
+                                </div>
+                                <button onClick={() => setWPhoto(null)} className="p-1 hover:bg-zinc-150 text-red-500 rounded"><X className="w-4 h-4" /></button>
+                              </div>
+                            )}
                           </div>
                         </div>
 
-                        {/* Price & Action */}
-                        <div className="text-right shrink-0 flex flex-col items-end space-y-2">
-                          <p className="text-sm font-black text-slate-900">
-                            R$ {item.totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </p>
-                          <button
-                            id={`btn-remove-item-${item.id}`}
-                            onClick={() => handleRemoveItem(item.id)}
-                            className="p-1.5 text-slate-400 hover:text-red-650 hover:bg-red-50 rounded-lg transition"
-                            title="Remover item"
+                        <button 
+                          onClick={() => setWizardStep(2)}
+                          className="w-full py-3 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-xl font-bold text-xs transition uppercase tracking-wider shadow cursor-pointer mt-3"
+                        >
+                          Continuar para Cobertura →
+                        </button>
+                      </div>
+                    )}
+
+                    {/* STEP 2: COVERAGE / TILES */}
+                    {wizardStep === 2 && (
+                      <div className="space-y-4">
+                        <div className="space-y-0.5">
+                          <h3 className="text-base font-extrabold">Telhas e Cobertura Metálica</h3>
+                          <p className="text-xs text-zinc-400">Geração de chapas de cobertura galvalume / zinco</p>
+                        </div>
+
+                        <div className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-850 dark:bg-zinc-900/40 space-y-3.5">
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-zinc-400">Modelo da Telha</label>
+                            <select 
+                              value={selTileType}
+                              onChange={(e) => setSelTileType(e.target.value)}
+                              className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-bold outline-none text-[#1a1a1a] dark:text-white"
+                            >
+                              <option>Trapézio 25</option>
+                              <option>Trapézio 40</option>
+                              <option>Ondulada 17</option>
+                              <option>Sanduíche Termoacústica</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-zinc-400">Material de Composição</label>
+                            <div className="flex gap-1.5 flex-wrap">
+                              {['Galvalume', 'Galvanizado', 'Alumínio', 'Pré-Pintada'].map((m) => (
+                                <button
+                                  key={m}
+                                  onClick={() => setSelTileMat(m)}
+                                  className={`flex-1 py-1.5 px-3 border rounded-xl text-[10px] font-bold uppercase transition ${
+                                    selTileMat === m ? 'border-amber-500 bg-amber-500 text-zinc-950 font-black' : 'border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-500'
+                                  }`}
+                                >
+                                  {m}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-zinc-400">Comprimento (m)</label>
+                              <input 
+                                type="number" 
+                                value={tileLen}
+                                onChange={(e) => setTileLen(Math.max(1, parseFloat(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-zinc-400">Quantidade (un)</label>
+                              <input 
+                                type="number" 
+                                value={tileQty}
+                                onChange={(e) => setTileQty(Math.max(1, parseInt(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-zinc-403">Preço Estimado do m² (R$)</label>
+                            <input 
+                              type="number"
+                              value={tilePrice}
+                              onChange={(e) => setTilePrice(Math.max(1, parseFloat(e.target.value) || 0))}
+                              className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                            />
+                          </div>
+
+                          <button 
+                            onClick={addTileToStep}
+                            className="w-full py-2 bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 rounded-xl font-bold text-[11px] uppercase tracking-wider transition"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            + Adicionar Área de Cobertura
+                          </button>
+                        </div>
+
+                        {/* List of active added coverage items */}
+                        {wTileItems.length > 0 && (
+                          <div className="space-y-1.5">
+                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block">Ítens Coberturas Registrados:</span>
+                            {wTileItems.map((it, idx) => (
+                              <div key={it.id} className="p-3 bg-zinc-200/50 dark:bg-zinc-900 rounded-xl flex justify-between items-center text-xs">
+                                <div>
+                                  <span className="font-extrabold">{it.desc}</span>
+                                  <p className="text-[10px] text-zinc-500 font-bold">{it.specs} • R$ {it.unit}/m²</p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <strong className="font-bold">R$ {it.total.toFixed(2)}</strong>
+                                  <button onClick={() => setWTileItems(wTileItems.filter(p => p.id !== it.id))} className="text-red-500"><Trash2 className="w-4 h-4" /></button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex gap-2.5 pt-2">
+                          <button onClick={() => setWizardStep(1)} className="flex-1 py-3 bg-zinc-500 text-white rounded-xl font-bold text-xs">Voltar</button>
+                          <button onClick={() => setWizardStep(3)} className="flex-1 py-3 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-xl font-bold text-xs">Avançar para Calhas →</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* STEP 3: GUTTERS AND FLASHINGS (CALHAS E RUFOS) */}
+                    {wizardStep === 3 && (
+                      <div className="space-y-4">
+                        <div className="space-y-0.5">
+                          <h3 className="text-base font-extrabold font-condensed">Calhas e Rufos de Escoamento</h3>
+                          <p className="text-xs text-zinc-400">Configure as dobragens em chapas galvanizadas</p>
+                        </div>
+
+                        {/* Setup Calha inputs box */}
+                        <div className="p-4.5 rounded-2xl border border-zinc-200 dark:border-zinc-850 dark:bg-zinc-900/30 space-y-3">
+                          <span className="text-xs uppercase font-black text-amber-500 tracking-wider">🔩 1. Calha sob Medida</span>
+                          
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-zinc-400">Modelo Calha</label>
+                            <select 
+                              value={selGutterType}
+                              onChange={(e) => setSelGutterType(e.target.value)}
+                              className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white font-bold"
+                            >
+                              <option>Calha Moldura Pluvia</option>
+                              <option>Calha Americana Pingadeira</option>
+                              <option>Calha Quadrada de Beiral</option>
+                              <option>Calha Platibanda de Sobrecarga</option>
+                            </select>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-zinc-400">Corte Desenvolvimento (mm)</label>
+                              <input 
+                                type="number" 
+                                value={gutterCut}
+                                onChange={(e) => setGutterCut(Math.max(10, parseInt(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-zinc-400">Comprimento (m)</label>
+                              <input 
+                                type="number" 
+                                value={gutterLen}
+                                onChange={(e) => setGutterLen(Math.max(1, parseFloat(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                              />
+                            </div>
+                          </div>
+
+                          <button 
+                            onClick={addGutterToStep}
+                            className="w-full py-1.5 bg-yellow-100 text-yellow-850 border border-yellow-250 text-[10px] font-black uppercase tracking-wide rounded-lg"
+                          >
+                            + Adicionar Linha de Calha
+                          </button>
+                        </div>
+
+                        {/* Setup Rufo inputs box */}
+                        <div className="p-4.5 rounded-2xl border border-zinc-200 dark:border-zinc-850 dark:bg-zinc-900/30 space-y-3">
+                          <span className="text-xs uppercase font-black text-amber-500 tracking-wider">🔩 2. Rufos / Contra Rufo</span>
+                          
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-zinc-400">Modelo Rufo</label>
+                            <select 
+                              value={selRufoType}
+                              onChange={(e) => setSelRufoType(e.target.value)}
+                              className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white font-bold"
+                            >
+                              <option>Rufo Encosto c/ Pingadeira</option>
+                              <option>Rufo Pingadeira Externa</option>
+                              <option>Rufo Encosto Interno</option>
+                              <option>Cumeeira Sob Medida</option>
+                            </select>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-zinc-400">Corte Desenvolvimento (mm)</label>
+                              <input 
+                                type="number" 
+                                value={rufoCut}
+                                onChange={(e) => setRufoCut(Math.max(10, parseInt(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-zinc-400">Comprimento (m)</label>
+                              <input 
+                                type="number" 
+                                value={rufoLen}
+                                onChange={(e) => setRufoLen(Math.max(1, parseFloat(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                              />
+                            </div>
+                          </div>
+
+                          <button 
+                            onClick={addRufoToStep}
+                            className="w-full py-1.5 bg-yellow-100 text-yellow-850 border border-yellow-250 text-[10px] font-black uppercase tracking-wide rounded-lg"
+                          >
+                            + Adicionar Linha de Rufo
+                          </button>
+                        </div>
+
+                        {/* List added features */}
+                        {(wGutterItems.length > 0 || wRufoItems.length > 0) && (
+                          <div className="space-y-2">
+                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block">Peças Dobradas Registradas:</span>
+                            {[...wGutterItems, ...wRufoItems].map((e) => (
+                              <div key={e.id} className="p-3 bg-zinc-200/55 dark:bg-zinc-900 rounded-xl flex justify-between items-center text-xs">
+                                <div>
+                                  <strong className="font-extrabold">{e.desc}</strong>
+                                  <p className="text-[10px] text-zinc-500 font-bold">{e.specs}</p>
+                                </div>
+                                <span className="font-bold shrink-0">R$ {e.total.toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="flex gap-2">
+                          <button onClick={() => setWizardStep(2)} className="flex-1 py-3 bg-zinc-500 text-white rounded-xl font-bold text-xs">Voltar</button>
+                          <button onClick={() => setWizardStep(4)} className="flex-1 py-3 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-xl font-bold text-xs font-condensed tracking-wider">Avançar para Conexões →</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* STEP 4: DOWNPIPES (CONDUTORES), CHIMNEY FLUES,Bisnagas de PU-40 SEALANT */}
+                    {wizardStep === 4 && (
+                      <div className="space-y-4">
+                        <div className="space-y-0.5">
+                          <h3 className="text-base font-extrabold">Condutores e Mangueiras de Vedação</h3>
+                          <p className="text-xs text-zinc-400">Defina os condutores pluviais e bisnagas de vedação PU-40</p>
+                        </div>
+
+                        {/* Condutores Pluviais retangulares */}
+                        <div className="bg-zinc-500/5 dark:bg-zinc-900/30 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-850 space-y-3">
+                          <span className="text-[11px] font-black text-amber-500 uppercase tracking-wider block">🚿 Condutores Pluviais</span>
+                          
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-zinc-400">Quantidade (un)</label>
+                              <input 
+                                type="number" 
+                                value={wCondQty}
+                                onChange={(e) => setWCondQty(Math.max(0, parseInt(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-zinc-400">Comp. Barra (m)</label>
+                              <input 
+                                type="number" 
+                                value={wCondLen}
+                                onChange={(e) => setWCondLen(Math.max(1, parseFloat(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Chaminés e Chapéus */}
+                        <div className="bg-zinc-500/5 dark:bg-zinc-900/30 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-850 space-y-3">
+                          <span className="text-[11px] font-black text-amber-500 uppercase tracking-wider block">🏭 Chaminés & Acessórios</span>
+                          
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-zinc-400">Quantidade (un)</label>
+                              <input 
+                                type="number" 
+                                value={wChamQty}
+                                onChange={(e) => setWChamQty(Math.max(0, parseInt(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-zinc-400">Preço Chapéu (R$)</label>
+                              <input 
+                                type="number" 
+                                value={wChamPrice}
+                                onChange={(e) => setWChamPrice(Math.max(0, parseFloat(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* PU-40 Bisnaga counts */}
+                        <div className="bg-zinc-500/5 dark:bg-zinc-900/30 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-850 space-y-3">
+                          <span className="text-[11px] font-black text-amber-500 uppercase tracking-wider block">🧪 Selante bisnaga PU-40 (400g)</span>
+                          
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-zinc-400">Bisnagas Recomendadas</label>
+                              <input 
+                                type="number" 
+                                value={puQty}
+                                onChange={(e) => setPuQty(Math.max(0, parseInt(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white font-bold"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-zinc-400">Valor Unitário (R$)</label>
+                              <input 
+                                type="number" 
+                                value={puPrice}
+                                onChange={(e) => setPuPrice(Math.max(0, parseFloat(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button onClick={() => setWizardStep(3)} className="flex-1 py-3 bg-zinc-500 text-white rounded-xl font-bold text-xs">Voltar</button>
+                          <button onClick={() => setWizardStep(5)} className="flex-1 py-3 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-xl font-bold text-xs font-condensed tracking-wider">Avançar para Resumo →</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* STEP 5: LABOR FEES, SERVICE COMMENTS AND CONCLUDE ORCAMENTO */}
+                    {wizardStep === 5 && (
+                      <div className="space-y-4">
+                        <div className="space-y-0.5">
+                          <h3 className="text-base font-extrabold font-condensed">Resumo e Aprovação do Orçamento</h3>
+                          <p className="text-xs text-zinc-400">Configure descontos comerciais e salve o projeto</p>
+                        </div>
+
+                        <div className="p-4 rounded-3xl border border-zinc-200 dark:border-zinc-850 dark:bg-zinc-900/20 space-y-3.5">
+                          
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-zinc-400">Mão de Obra de Instalação (R$)</label>
+                            <input 
+                              type="number" 
+                              value={laborPrice}
+                              onChange={(e) => setLaborPrice(Math.max(0, parseFloat(e.target.value) || 0))}
+                              className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl px-3 py-2 text-sm font-bold text-zinc-900 dark:text-white outline-none"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-zinc-400">Desconto Comercial Especial (%)</label>
+                            <input 
+                              type="number" 
+                              value={discountPercent}
+                              onChange={(e) => setDiscountPercent(Math.max(0, Math.min(99, parseInt(e.target.value) || 0)))}
+                              className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl px-3 py-2 text-sm font-bold text-zinc-900 dark:text-white outline-none"
+                            />
+                          </div>
+
+                          {/* Live Dynamic invoice block summary list */}
+                          <div className="bg-[#111215] text-white p-4.5 rounded-2xl space-y-2 text-xs">
+                            <div className="flex justify-between items-center text-zinc-400 font-bold">
+                              <span>Soma Bruta Materiais:</span>
+                              <span className="font-mono">R$ {wSubtotal.toFixed(2)}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-amber-400 font-bold leading-normal">
+                              <span>Desconto Concedido ({discountPercent}%):</span>
+                              <span className="font-mono">- R$ {wDiscAmount.toFixed(2)}</span>
+                            </div>
+                            <div className="border-t border-zinc-800 my-1 pt-1.5 flex justify-between items-center text-base font-black text-emerald-400">
+                              <span>TOTAL DO CLIENTE:</span>
+                              <span className="font-mono">R$ {wTotal.toFixed(2)}</span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-xs font-bold text-zinc-400">Termos, Garantias e Notas</label>
+                            <textarea 
+                              value={wNotes}
+                              onChange={(e) => setWNotes(e.target.value)}
+                              className="w-full min-h-[60px] bg-white dark:bg-zinc-900 border rounded-xl text-xs p-2 text-zinc-900 dark:text-white outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button onClick={() => setWizardStep(4)} className="flex-1 py-3.5 bg-zinc-500 text-white rounded-xl font-bold text-xs cursor-pointer">Voltar</button>
+                          <button 
+                            onClick={saveWizardBudget}
+                            className="flex-[2] py-3.5 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs uppercase tracking-widest rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>Salvar Orçamento 🎉</span>
                           </button>
                         </div>
                       </div>
-                    ))}
+                    )}
+
                   </div>
                 )}
-              </div>
 
-              {/* DATA CUSTOMER & PRICING STATS */}
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-6">
-                <h3 className="text-sm font-black uppercase tracking-wider text-slate-800 pb-3 border-b border-slate-100 flex items-center space-x-2">
-                  <User className="w-4 h-4 text-orange-500" />
-                  <span>Dados do Cliente & Custos Adicionais</span>
-                </h3>
-
-                {/* Form client */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-500">Nome do Comprador</label>
-                    <input
-                      id="customer-name-field"
-                      type="text"
-                      placeholder="Ex: Carlos Pedreira"
-                      value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-none focus:border-orange-500 transition"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-500">WhatsApp / Celular</label>
-                    <input
-                      id="customer-phone-field"
-                      type="text"
-                      placeholder="Ex: 11988887777"
-                      value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                      className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-none focus:border-orange-500 transition"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-500">Parceiro / Empresa</label>
-                    <input
-                      id="customer-company-field"
-                      type="text"
-                      placeholder="Ex: Serralheria Confiança"
-                      value={customerCompany}
-                      onChange={(e) => setCustomerCompany(e.target.value)}
-                      className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 focus:outline-none focus:border-orange-500 transition"
-                    />
-                  </div>
-                </div>
-
-                {/* Form parameters */}
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-1">
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-500 flex items-center space-x-1">
-                      <Percent className="w-3.5 h-3.5 text-orange-400" />
-                      <span>Desconto (%)</span>
-                    </label>
-                    <input
-                      id="discount-pct-field"
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={discountPercent || ''}
-                      onChange={(e) => setDiscountPercent(Math.max(0, parseFloat(e.target.value) || 0))}
-                      className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 font-bold text-emerald-600 focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-500 flex items-center space-x-1">
-                      <Plus className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Acréscimo (%)</span>
-                    </label>
-                    <input
-                      id="addition-pct-field"
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={additionPercent || ''}
-                      onChange={(e) => setAdditionPercent(Math.max(0, parseFloat(e.target.value) || 0))}
-                      className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 font-bold text-slate-800 focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-500">Frete CIF/FOB (R$)</label>
-                    <input
-                      id="freight-cost-field"
-                      type="number"
-                      min="0"
-                      value={freightCost || ''}
-                      onChange={(e) => setFreightCost(Math.max(0, parseFloat(e.target.value) || 0))}
-                      className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 font-bold text-slate-800 focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-500">Validade (dias)</label>
-                    <select
-                      id="validity-days-field"
-                      value={validityDays}
-                      onChange={(e) => setValidityDays(parseInt(e.target.value) || 10)}
-                      className="w-full text-sm bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-850 font-semibold focus:outline-none"
-                    >
-                      <option value="5">5 dias úteis</option>
-                      <option value="10">10 dias úteis</option>
-                      <option value="15">15 dias úteis</option>
-                      <option value="30">30 dias corridos</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Additional Note */}
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-slate-500">Observações Legais no PDF</label>
-                  <textarea
-                    id="quote-notes"
-                    rows={2}
-                    placeholder="Ex: Retirada imediata FOB ou Prazo de entrega de 5 dias úteis de acordo com a produção Gerdau."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-slate-700 focus:outline-none focus:border-orange-500 transition"
-                  ></textarea>
-                </div>
-              </div>
-
-              {/* LOGISTICS SUGGESTION & OVERALL REVENUE ACCRUAL */}
-              {items.length > 0 && (
-                <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-xl border border-slate-950 space-y-6">
-                  
-                  {/* Logistics Truck Advisor banner */}
-                  <div className={`p-4 rounded-2xl bg-slate-950/60 border border-slate-800 flex items-start space-x-4`}>
-                    <div className="p-3 bg-slate-900 rounded-xl text-orange-400">
-                      <Truck className="w-6 h-6 stroke-1.5" />
+                {/* TAB 3: SAVED HISTORICO BUDGETS LIST */}
+                {viewportTab === 'hist' && (
+                  <div className="space-y-4 animate-fade-in pb-10">
+                    <div className="space-y-0.5 select-none">
+                      <span className="text-[10px] font-bold text-zinc-400 tracking-wider uppercase">Controle Financeiro</span>
+                      <h3 className="text-lg font-black font-condensed tracking-wide">Histórico de Orçamentos</h3>
                     </div>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-orange-400">Logística de Transporte Calculada</span>
-                        <span className="bg-slate-800 text-slate-300 text-[9px] px-1.5 py-0.5 rounded font-mono font-bold">Resolução ABNT</span>
+
+                    <div className="bg-white dark:bg-zinc-950 p-3 rounded-2xl border dark:border-zinc-850">
+                      <CalhaZapHistory
+                        quotes={quotes}
+                        onToggleStatus={handleToggleQuoteStatus}
+                        onDeleteQuote={handleDeleteQuoteId}
+                        onEditLoad={handleEditLoad}
+                        onPrintQuote={handleDirectPrintReprnt}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 4: CALCULATORS 2X2 DASHBOARD GRID OR ACTIVE CALC PANEL */}
+                {viewportTab === 'calc' && (
+                  <div className="space-y-4 animate-fade-in pb-12">
+                    
+                    {/* Inner detail view if calculator is selected */}
+                    {selectedCalc ? (
+                      <div className="space-y-4 animate-fade-in">
+                        {/* Calculator header containing Back link */}
+                        <button 
+                          onClick={() => setSelectedCalc(null)}
+                          className="flex items-center gap-1.5 text-xs text-amber-500 font-bold cursor-pointer group"
+                        >
+                          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                          <span>Voltar para Calculadoras</span>
+                        </button>
+
+                        {/* Metragem manual calculated box */}
+                        {selectedCalc === 'metragem' && (
+                          <div className="space-y-4">
+                            <div className="space-y-0.5">
+                              <h3 className="text-base font-extrabold">Cálculo de Metragem Quadrada (m²)</h3>
+                              <p className="text-xs text-zinc-400">Calcule chapas lineares com fator de cobertura</p>
+                            </div>
+
+                            <div className={`p-4 rounded-2xl border ${darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'} space-y-3`}>
+                              <div className="space-y-1">
+                                <label className="text-xs font-bold text-zinc-400">Largura Plana (m)</label>
+                                <input 
+                                  type="number" 
+                                  value={metWidthVal}
+                                  onChange={(e) => setMetWidthVal(Math.max(1, parseFloat(e.target.value) || 0))}
+                                  className="w-full bg-white dark:bg-zinc-950 border rounded-xl px-3 py-1.5 text-xs"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-xs font-bold text-zinc-400">Extensão / Comprimento (m)</label>
+                                <input 
+                                  type="number" 
+                                  value={metLengthVal}
+                                  onChange={(e) => setMetLengthVal(Math.max(1, parseFloat(e.target.value) || 0))}
+                                  className="w-full bg-white dark:bg-zinc-950 border rounded-xl px-3 py-1.5 text-xs"
+                                />
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-xs font-bold text-zinc-404">Fator de Transpasse / Caimento inclinável</label>
+                                <select 
+                                  value={metPitchCoeff} 
+                                  onChange={(e) => setMetPitchCoeff(parseFloat(e.target.value))}
+                                  className="w-full bg-white dark:bg-zinc-950 border rounded-xl px-3 py-1.5 text-xs"
+                                >
+                                  <option value={1.0}>Plano / Liso (Sem inclinação fator 1.0)</option>
+                                  <option value={1.04}>Cobertura Inclinada Padrão 20% (Fator 1.04)</option>
+                                  <option value={1.12}>Cobertura Inclinada Forte 35% (Fator 1.12)</option>
+                                </select>
+                              </div>
+
+                              <div className="p-3.5 bg-amber-500/10 border border-amber-300 dark:border-amber-900/50 rounded-xl space-y-1 text-center">
+                                <span className="text-[10px] text-amber-500 font-black tracking-widest uppercase">ÁREA INDUSTRIAL COMPUTADA</span>
+                                <div className="text-3xl font-black font-condensed text-amber-500 leading-none">
+                                  {(metWidthVal * metLengthVal * metPitchCoeff).toFixed(2)} m²
+                                </div>
+                                <p className="text-[10px] text-zinc-500 font-normal">Superfície plana líguida: {(metWidthVal * metLengthVal).toFixed(1)} m²</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Metro ↔ Kg dynamic component */}
+                        {selectedCalc === 'metro-kg' && (
+                          <div className="space-y-3">
+                            <div className="space-y-0.5">
+                              <h3 className="text-base font-extrabold flex items-center gap-1.5">
+                                <Ruler className="w-5 h-5 text-amber-500" />
+                                <span>Conversor Metro ↔ Peso KG</span>
+                              </h3>
+                              <p className="text-xs text-zinc-400">Calcule pesos de bobinas mães e metros fatiados</p>
+                            </div>
+                            <CalhaZapMetro 
+                              verificarAtivo={verificarAtivo}
+                              exibirLock={exibirLock}
+                            />
+                          </div>
+                        )}
+
+                        {/* Plano de corte component */}
+                        {selectedCalc === 'corte' && (
+                          <div className="space-y-3">
+                            <div className="space-y-0.5">
+                              <h3 className="text-base font-extrabold flex items-center gap-1.5">
+                                <Scissors className="w-5 h-5 text-amber-555" />
+                                <span>Otimização Plano de Corte</span>
+                              </h3>
+                              <p className="text-xs text-zinc-400">Aproveitamento slitter sem retalhos residenciais</p>
+                            </div>
+                            <CalhaZapCorte 
+                              verificarAtivo={verificarAtivo}
+                              exibirLock={exibirLock}
+                            />
+                          </div>
+                        )}
+
+                        {/* Inclinação slope visual helper */}
+                        {selectedCalc === 'incline' && (
+                          <div className="space-y-4">
+                            <div className="space-y-0.5">
+                              <h3 className="text-base font-extrabold">Cálculo de Inclinação & Beiral</h3>
+                              <p className="text-xs text-zinc-400">Projetos de caimento hidráulico de calha pluvial</p>
+                            </div>
+
+                            <div className={`p-4 rounded-2xl border ${darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'} space-y-3.5`}>
+                              
+                              <div className="space-y-1">
+                                <label className="text-xs font-bold text-zinc-400">Comprimento Horizontal do Cano / Beiral (m)</label>
+                                <input 
+                                  type="range"
+                                  min={2}
+                                  max={15}
+                                  step={0.5}
+                                  value={incRoofLen}
+                                  onChange={(e) => setIncRoofLen(parseFloat(e.target.value))}
+                                  className="w-full accent-amber-500"
+                                />
+                                <div className="flex justify-between text-[11px] font-bold text-zinc-500">
+                                  <span>2 m</span>
+                                  <span className="text-amber-500 bg-amber-50 px-1 py-0.5 rounded border border-amber-200">{incRoofLen} metros</span>
+                                  <span>15 m</span>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="text-xs font-bold text-zinc-400">Inclinação Alvo Desejada (%)</label>
+                                <div className="flex gap-1">
+                                  {[10, 15, 20, 25, 30, 40].map((p) => (
+                                    <button
+                                      key={p}
+                                      onClick={() => setIncRoofPercent(p)}
+                                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition ${
+                                        incRoofPercent === p ? 'bg-amber-400 text-zinc-950 font-black' : 'bg-zinc-200/50 dark:bg-zinc-950 text-zinc-500'
+                                      }`}
+                                    >
+                                      {p}%
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Trigonometric result */}
+                              <div className="p-4 bg-[#111215] text-white rounded-xl space-y-2.5">
+                                <span className="text-[9px] uppercase font-bold text-zinc-450 tracking-widest block">RESULTADO MATEMÁTICO</span>
+                                
+                                <div className="flex justify-between items-center">
+                                  <span className="text-zinc-400">Altura Necessária da Cumeeira:</span>
+                                  <strong className="text-amber-400 font-mono text-base">{(incRoofLen * (incRoofPercent / 100)).toFixed(2)}m ({((incRoofLen * (incRoofPercent / 100)) * 100).toFixed(0)}cm)</strong>
+                                </div>
+
+                                <div className="flex justify-between items-center text-[10px] text-zinc-500 font-bold border-t border-zinc-800 pt-1.5">
+                                  <span>Ângulo de Escoamento:</span>
+                                  <span className="font-mono text-zinc-300">{(Math.atan(incRoofPercent / 100) * (180 / Math.PI)).toFixed(1)}° graus</span>
+                                </div>
+
+                                {/* Triangulo diagram draw */}
+                                <div className="h-20 w-full relative border-b border-zinc-700 mt-2 flex items-end">
+                                  <div className="absolute left-0 bottom-0 text-[9px] text-[#ca8a04]">Calha</div>
+                                  <div className="absolute right-0 bottom-0 text-[9px] text-zinc-500">Beiral</div>
+                                  
+                                  {/* Triangle SVG slope */}
+                                  <svg className="w-full h-full stroke-amber-500 fill-amber-500/10 overflow-visible" style={{ position: 'absolute' }}>
+                                    <path d={`M 15 80 L 320 ${80 - (incRoofPercent * 1.4)} L 320 80 Z`} strokeWidth="2" />
+                                  </svg>
+                                </div>
+                              </div>
+
+                            </div>
+                          </div>
+                        )}
+
                       </div>
-                      <h4 className="font-extrabold text-sm text-white">{recommendedTruck.name}</h4>
-                      <p className="text-xs text-slate-400 leading-relaxed">{recommendedTruck.description}</p>
+                    ) : (
                       
-                      {/* Weight progress bar */}
-                      <div className="pt-2">
-                        <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-                          <span>Carga Atual: <strong>{totalWeightKg.toFixed(1)} kg</strong></span>
-                          <span>Capacidade Máxima: <strong>{recommendedTruck.maxWeightKg} kg</strong></span>
+                      // CALCULATORS 2X2 GENERAL GRID MENU (Matches screen 2)
+                      <div className="space-y-4">
+                        
+                        <div className="space-y-0.5">
+                          <span className="text-[10px] font-bold text-zinc-400 tracking-wider uppercase">Ferramentas Profissionais</span>
+                          <h3 className="text-lg font-black font-condensed tracking-wide">Calculadoras Técnicas</h3>
                         </div>
-                        <div className="w-full bg-slate-800 h-2 rounded-full mt-1 overflow-hidden">
+
+                        {/* Top dark navy gradient banner matching Image 2 */}
+                        <div className="p-4 rounded-3xl bg-zinc-900 border border-zinc-800 text-white flex gap-4 items-center relative overflow-hidden">
+                          <div className="absolute right-[-10px] bottom-[-10px] opacity-10">
+                            <Calculator className="w-32 h-32 text-white" />
+                          </div>
+                          
+                          <div className="w-12 h-12 bg-amber-400/20 text-amber-300 border border-amber-500/30 rounded-2xl flex items-center justify-center shrink-0">
+                            <Calculator className="w-6 h-6 stroke-[2.5]" />
+                          </div>
+                          <div className="space-y-0.5">
+                            <h4 className="font-bold text-sm tracking-tight">Cálculos Profissionais</h4>
+                            <p className="text-[10px] text-zinc-400 leading-snug">Economia de material e precisão absoluta na execução</p>
+                          </div>
+                        </div>
+
+                        {/* Primary 2x2 cards category selector (Matches visual screen 2) */}
+                        <div className="grid grid-cols-2 gap-3 pb-8">
+                          
+                          {/* Card 1: Metragem */}
                           <div 
-                            className="bg-orange-500 h-full rounded-full transition-all duration-300"
-                            style={{ width: `${Math.min(100, (totalWeightKg / recommendedTruck.maxWeightKg) * 100)}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                            onClick={() => setSelectedCalc('metragem')}
+                            className={`p-4 rounded-2xl border cursor-pointer hover:scale-101 active:scale-98 transition flex flex-col justify-between h-[125px] ${
+                              darkMode ? 'bg-zinc-905 border-zinc-850 hover:bg-zinc-900' : 'bg-white hover:bg-zinc-50 border-zinc-200 shadow-xs'
+                            }`}
+                          >
+                            <span className="p-1 rounded-lg bg-blue-100 text-blue-700 w-7 h-7 flex items-center justify-center"><Ruler className="w-4.5 h-4.5" /></span>
+                            <div>
+                              <h5 className="font-extrabold text-xs">Metragem</h5>
+                              <p className="text-[10px] text-zinc-550 truncate">m² de calha e telha</p>
+                              <span className="text-[9px] font-black text-amber-500 block mt-1.5">Calcular →</span>
+                            </div>
+                          </div>
 
-                  {/* Financial final aggregation */}
-                  <div className="bg-slate-950/40 p-5 rounded-2xl border border-slate-850">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-5 gap-x-2 text-center sm:divide-x sm:divide-slate-800">
-                      <div className="px-1">
-                        <p className="text-[10px] uppercase text-slate-400 font-semibold">Peso Total</p>
-                        <p className="text-base sm:text-lg font-bold text-white mt-1 font-mono">{totalWeightKg.toFixed(1)} <span className="text-[10px] sm:text-xs font-normal">kg</span></p>
-                      </div>
-                      <div className="px-1">
-                        <p className="text-[10px] uppercase text-slate-400 font-semibold font-sans">Soma</p>
-                        <p className="text-sm sm:text-base font-bold text-slate-300 mt-1 font-mono">R$ {subtotalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                      </div>
-                      <div className="px-1">
-                        <p className="text-[10px] uppercase text-slate-400 font-semibold">Descontos</p>
-                        <p className="text-sm sm:text-base font-bold text-emerald-400 mt-1 font-mono">- R$ {discountAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                      </div>
-                      <div className="px-1">
-                        <p className="text-[10px] sm:text-[11px] uppercase text-orange-400 font-black tracking-wide">Valor Final</p>
-                        <p className="text-lg sm:text-xl font-black text-white mt-1 font-mono">R$ {totalPriceBrl.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                      </div>
-                    </div>
-                  </div>
+                          {/* Card 2: Metro <-> Kg */}
+                          <div 
+                            onClick={() => setSelectedCalc('metro-kg')}
+                            className={`p-4 rounded-2xl border cursor-pointer hover:scale-101 active:scale-98 transition flex flex-col justify-between h-[125px] ${
+                              darkMode ? 'bg-zinc-905 border-zinc-850 hover:bg-zinc-900' : 'bg-white hover:bg-zinc-50 border-zinc-200 shadow-xs'
+                            }`}
+                          >
+                            <span className="p-1 rounded-lg bg-amber-100 text-amber-700 w-7 h-7 flex items-center justify-center"><Scale className="w-4.5 h-4.5" /></span>
+                            <div>
+                              <h5 className="font-extrabold text-xs">Metro ↔ Kg</h5>
+                              <p className="text-[10px] text-zinc-550 truncate">Conversão de bobinas</p>
+                              <span className="text-[9px] font-black text-amber-500 block mt-1.5">Calcular →</span>
+                            </div>
+                          </div>
 
-                  {/* Save to history action */}
-                  <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-                    <div className="flex items-center space-x-2.5">
-                      <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg shrink-0">
-                        <CheckCircle2 className="w-4 h-4" />
-                      </div>
-                      <div className="text-left">
-                        <p className="font-bold text-slate-350">Gravar Cotação Ativa</p>
-                        <p className="text-[10px] text-slate-400">Guarde no Histórico local para consultas posteriores.</p>
-                      </div>
-                    </div>
-                    <button
-                      id="btn-save-to-history-main"
-                      onClick={handleSaveQuoteToHistory}
-                      className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl transition flex items-center justify-center space-x-1.5 shadow"
-                    >
-                      <FileSpreadsheet className="w-3.5 h-3.5 stroke-[2.5]" />
-                      <span>Salvar em Histórico</span>
-                    </button>
-                  </div>
+                          {/* Card 3: Plano de Corte */}
+                          <div 
+                            onClick={() => setSelectedCalc('corte')}
+                            className={`p-4 rounded-2xl border cursor-pointer hover:scale-101 active:scale-98 transition flex flex-col justify-between h-[125px] ${
+                              darkMode ? 'bg-zinc-950 border-zinc-850 hover:bg-zinc-900' : 'bg-white hover:bg-zinc-50 border-zinc-200 shadow-xs'
+                            }`}
+                          >
+                            <span className="p-1 rounded-lg bg-emerald-100 text-emerald-700 w-7 h-7 flex items-center justify-center"><Scissors className="w-4.5 h-4.5" /></span>
+                            <div>
+                              <h5 className="font-extrabold text-xs">Plano de Corte</h5>
+                              <p className="text-[10px] text-zinc-550 truncate">Aproveitamento limpo</p>
+                              <span className="text-[9px] font-black text-amber-500 block mt-1.5">Calcular →</span>
+                            </div>
+                          </div>
 
-                  {/* Operational sharing actions row */}
-                  <div className="flex flex-col sm:flex-row gap-3">
-                    <button
-                      id="btn-generate-pdf-preview"
-                      onClick={() => setShowPreviewModal(true)}
-                      className="flex-1 bg-white hover:bg-slate-100 text-slate-900 font-bold text-sm py-3.5 px-6 rounded-2xl transition flex items-center justify-center space-x-2 shadow-sm"
-                    >
-                      <Printer className="w-4.5 h-4.5" />
-                      <span>Gerar PDF / Imprimir Orçamento</span>
-                    </button>
+                          {/* Card 4: Inclinação */}
+                          <div 
+                            onClick={() => setSelectedCalc('incline')}
+                            className={`p-4 rounded-2xl border cursor-pointer hover:scale-101 active:scale-98 transition flex flex-col justify-between h-[125px] ${
+                              darkMode ? 'bg-zinc-950 border-zinc-850 hover:bg-zinc-900' : 'bg-white hover:bg-zinc-50 border-zinc-200 shadow-xs'
+                            }`}
+                          >
+                            <span className="p-1 rounded-lg bg-purple-100 text-purple-700 w-7 h-7 flex items-center justify-center"><Wrench className="w-4.5 h-4.5" /></span>
+                            <div>
+                              <h5 className="font-extrabold text-xs">Inclinação</h5>
+                              <p className="text-[10px] text-zinc-550 truncate">Ajuste de caimento</p>
+                              <span className="text-[9px] font-black text-amber-500 block mt-1.5">Calcular →</span>
+                            </div>
+                          </div>
 
-                    <button
-                      id="btn-whatsapp-quote-bottom"
-                      onClick={handleSendWhatsApp}
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm py-3.5 px-6 rounded-2xl transition flex items-center justify-center space-x-2 shadow-lg shadow-emerald-600/10"
-                    >
-                      <Send className="w-4.5 h-4.5 stroke-[2.5]" />
-                      <span>Encaminhar via WhatsApp</span>
-                    </button>
-                  </div>
-
-                </div>
-              )}
-
-            </div>
-
-          </div>
-        )}
-
-        {/* TAB 2: PRODUTOS CATALOG REFERENCE */}
-        {activeTab === 'catalog' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-4">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div>
-                  <h3 className="font-extrabold text-slate-900 text-lg">Catálogo Referencial Brasileiro de Materiais Metálicos</h3>
-                  <p className="text-xs text-slate-500 mt-1">Preços de mercado referenciados em Reais (R$) por Kg com especificações da liga nas normas ABNT / ASTM.</p>
-                </div>
-                
-                {/* Search Bar Input */}
-                <div className="relative w-full md:w-80">
-                  <span className="absolute left-3 top-3.5 text-slate-400">
-                    <Search className="w-4 h-4" />
-                  </span>
-                  <input
-                    id="catalog-search-input"
-                    type="text"
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                    placeholder="Buscar liga, norma ou material..."
-                    className="w-full text-slate-800 bg-slate-50 border border-slate-220 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-orange-500"
-                  />
-                </div>
-              </div>
-
-              {/* Category Quick Filter */}
-              <div className="flex flex-wrap gap-1.5 pt-2">
-                <button
-                  onClick={() => setSelectedCategoryFilter("all")}
-                  className={`text-xs px-3.5 py-1.5 rounded-full font-semibold transition ${
-                    selectedCategoryFilter === "all" ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  Todos os Materiais
-                </button>
-                <button
-                  onClick={() => setSelectedCategoryFilter("sheets")}
-                  className={`text-xs px-3.5 py-1.5 rounded-full font-semibold transition ${
-                    selectedCategoryFilter === "sheets" ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  Chapas & Bobinas
-                </button>
-                <button
-                  onClick={() => setSelectedCategoryFilter("tubes")}
-                  className={`text-xs px-3.5 py-1.5 rounded-full font-semibold transition ${
-                    selectedCategoryFilter === "tubes" ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  Tubos e Metalon
-                </button>
-                <button
-                  onClick={() => setSelectedCategoryFilter("profiles")}
-                  className={`text-xs px-3.5 py-1.5 rounded-full font-semibold transition ${
-                    selectedCategoryFilter === "profiles" ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  Vigas & Perfis Estruturais
-                </button>
-                <button
-                  onClick={() => setSelectedCategoryFilter("rebar")}
-                  className={`text-xs px-3.5 py-1.5 rounded-full font-semibold transition ${
-                    selectedCategoryFilter === "rebar" ? "bg-slate-950 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  Vergalhões Gerdau CA-50/60
-                </button>
-              </div>
-            </div>
-
-            {/* Grid display products */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredCatalog.map((prod) => (
-                <div key={prod.id} className="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col justify-between shadow-sm hover:shadow-md transition">
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase tracking-wider bg-orange-50 text-orange-750 px-2 py-0.5 rounded border border-orange-100">
-                        {prod.category}
-                      </span>
-                      <span className="text-xs text-slate-400 font-semibold">{prod.standards}</span>
-                    </div>
-
-                    <h4 className="font-black text-slate-900 leading-snug">{prod.name}</h4>
-                    <p className="text-xs text-slate-600 leading-relaxed">{prod.description}</p>
-
-                    {prod.thicknesses && prod.thicknesses.length > 0 && (
-                      <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-150">
-                        <span className="text-[9px] text-slate-400 block font-black uppercase tracking-wider mb-1">Espessuras Disponíveis</span>
-                        <div className="flex flex-wrap gap-1">
-                          {prod.thicknesses.map(t => (
-                            <span key={t} className="text-[10px] font-semibold bg-white border text-slate-700 px-1.5 py-0.5 rounded">
-                              {t.toFixed(2)}mm
-                            </span>
-                          ))}
                         </div>
                       </div>
                     )}
+
                   </div>
+                )}
 
-                  <div className="pt-5 border-t border-slate-100 mt-5 flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] text-slate-450 uppercase font-black tracking-wider">Referência Kg</p>
-                      <p className="text-base font-black text-slate-800">
-                        R$ {prod.basePricePerKg.toFixed(2)} <span className="text-xs font-semibold text-slate-500">/ kg</span>
-                      </p>
-                    </div>
-
-                    <button
-                      id={`btn-select-catalog-${prod.id}`}
-                      onClick={() => {
-                        // Quick switch to quote mode and set this product
-                        setActiveTab('quote');
-                        // Small timeout to allow render and update the category
-                        setSelectedCategoryFilter(prod.category);
-                      }}
-                      className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition"
-                    >
-                      Configurar Peça
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 3: BITOLA CONVERSIONS AND SPECIFICATION GUIDE */}
-        {activeTab === 'bitolas' && (
-          <div className="max-w-4xl mx-auto space-y-6">
-            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
-              <div>
-                <h3 className="font-extrabold text-slate-900 text-lg">Conversor Comercial Inteligente de Bitolas</h3>
-                <p className="text-xs text-slate-500 mt-1">Converte polegadas comerciais para o padrão brasileiro de milímetros, detalhando o uso habitual recomendado em metalúrgicas brasileiras e serralherias.</p>
-              </div>
-
-              <div className="overflow-x-auto border border-slate-200 rounded-2xl">
-                <table className="w-full text-left border-collapse text-xs">
-                  <thead className="bg-[#1e293b] text-white">
-                    <tr>
-                      <th className="p-3.5 font-bold">Bitola Comercial (Pol)</th>
-                      <th className="p-3.5 font-bold">Equivalente em Milímetros (mm)</th>
-                      <th className="p-3.5 font-bold">Designação Habitual Brasileira</th>
-                      <th className="p-3.5 font-bold">Densidade de Vol. Média</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {BITOLA_CONVERSIONS.map((bit, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50 transition">
-                        <td className="p-3.5 font-bold text-slate-900 font-mono text-sm">{bit.gaugeInches}</td>
-                        <td className="p-3.5 font-semibold text-slate-700 font-mono text-sm">{bit.gaugeMm.toFixed(2)} mm</td>
-                        <td className="p-3.5 text-slate-705 font-medium">{bit.designator}</td>
-                        <td className="p-3.5 text-slate-400 font-mono">7850 kg/m³</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="bg-amber-50/55 border border-amber-250 rounded-2xl p-5 flex items-start space-x-3.5">
-              <Bot className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-              <div className="text-xs text-amber-900 space-y-1.5 leading-relaxed">
-                <p className="font-bold uppercase tracking-wider text-amber-950">Dica Prática do Vendedor:</p>
-                <p>
-                  No Brasil, o peso de chapas xadrez antiderrapantes costuma ter um acréscimo de <strong>3kg a 4.5kg por metro quadrado</strong> sobre a chapa lisa de mesma espessura, devido à relevagem do design antiderrapante estampado (padrão CSN).
-                </p>
-                <p>
-                  Para calcular tubos e perfis sob medida com o nosso assistente AI integrado, mude para a guia <strong>AssisteAço AI Expert</strong> para estimar perfis sob medida em tempo recorde!
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TAB 3.5: CALHA & TELHA PRO SUITE */}
-        {activeTab === 'calheiros' && (
-          <div className="max-w-6xl mx-auto">
-            <CalhaTelhaCalculators onAddItem={handleAddItem} />
-          </div>
-        )}
-
-        {/* TAB 3.7: HISTÓRICO & CARTEIRA DE CLIENTES (CONSULTAS) */}
-        {activeTab === 'history' && (
-          <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
-            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div>
-                  <h3 className="font-extrabold text-slate-900 text-lg flex items-center space-x-2">
-                    <FileSpreadsheet className="w-5 h-5 text-emerald-500" />
-                    <span>Histórico de Orçamentos & Clientes</span>
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-1 flex items-center space-x-1">
-                    <span>Consulte cotações salvas, envie segundas vias por WhatsApp, abra visualizações em PDF ou recarregue dados de clientes para novos ajustes.</span>
-                  </p>
-                </div>
-                
-                <button
-                  id="btn-history-new-init"
-                  onClick={() => {
-                    handleNewQuoteInit(true);
-                    setActiveTab('quote');
-                  }}
-                  className="bg-orange-500 hover:bg-orange-600 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl transition flex items-center space-x-2 shadow-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Novo Orçamento</span>
-                </button>
-              </div>
-
-              {/* Aggregated KPI Metrics of the Saved portfolio */}
-              {savedQuotes.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100">
-                  <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl">
-                    <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Cotações Gravadas</span>
-                    <span className="text-xl font-black text-slate-800 mt-1 block font-mono">{savedQuotes.length} <span className="text-xs font-semibold text-slate-500">cadastros</span></span>
-                  </div>
-                  <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl">
-                    <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Peso Total Negociado</span>
-                    <span className="text-xl font-black text-orange-650 mt-1 block font-mono">
-                      {savedQuotes.reduce((acc, q) => acc + q.totalWeightKg, 0).toFixed(1)} <span className="text-xs font-semibold text-slate-500">kg</span>
-                    </span>
-                  </div>
-                  <div className="bg-slate-50 border border-slate-150 p-4 rounded-2xl">
-                    <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Volume Financeiro Total</span>
-                    <span className="text-xl font-black text-emerald-650 mt-1 block font-mono">
-                      R$ {savedQuotes.reduce((acc, q) => acc + q.totalPriceBrl, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* List or Empty State */}
-            {savedQuotes.length === 0 ? (
-              <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center space-y-4 shadow-sm">
-                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto text-slate-400">
-                  <FileSpreadsheet className="w-8 h-8" />
-                </div>
-                <div className="max-w-md mx-auto space-y-2">
-                  <h4 className="font-bold text-slate-800 text-sm">O histórico de orçamentos está vazio</h4>
-                  <p className="text-xs text-slate-500 leading-relaxed">
-                    Você ainda não gravou nenhum orçamento. Vá para a primeira guia, monte a relação de peças do seu cliente e clique no botão <strong>"Salvar em Histórico"</strong> na lateral.
-                  </p>
-                  <div className="pt-2">
-                    <button
-                      onClick={() => setActiveTab('quote')}
-                      className="bg-slate-900 hover:bg-slate-855 text-white font-bold text-xs px-4 py-2 rounded-xl transition"
-                    >
-                      Ir para Calculadora de Aço
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {savedQuotes.map((quote) => (
-                  <div key={quote.id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col justify-between hover:shadow-md transition">
+                {/* TAB 5: EMPRESA, PLANS AND AI INTEGRATION */}
+                {viewportTab === 'emp' && (
+                  <div className="space-y-4 animate-fade-in pb-16">
                     
-                    {/* Card Top */}
-                    <div className="p-5 space-y-4 flex-1">
-                      <div className="flex items-start justify-between">
-                        <div className="space-y-1">
-                          <span className="bg-slate-100 border text-slate-700 font-mono font-bold text-[11px] px-2 py-0.5 rounded-lg block w-max">
-                            {quote.id}
-                          </span>
-                          <h4 className="text-base font-black text-slate-850 leading-tight pt-1">
-                            {quote.customerName}
-                          </h4>
-                          {quote.customerCompany && (
-                            <span className="bg-orange-50 text-orange-650 border border-orange-100 text-[10px] font-bold px-1.5 py-0.5 rounded inline-block">
-                              {quote.customerCompany}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-[11px] text-slate-400 font-semibold">{quote.date}</span>
-                      </div>
-
-                      {/* Items Summaries */}
-                      <div className="bg-slate-50 rounded-2xl p-3 border border-slate-150 text-xs text-slate-600 space-y-1.5">
-                        <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">Produtos incluídos ({quote.items.length})</p>
-                        <div className="max-h-24 overflow-y-auto space-y-1 divide-y divide-slate-100 pr-1">
-                          {quote.items.map((it, idx) => (
-                            <div key={idx} className="flex justify-between text-[11px] py-1 gap-4">
-                              <span className="truncate font-semibold text-slate-700">{it.quantity}x {it.product.name}</span>
-                              <span className="font-mono text-slate-500 shrink-0">{it.calculatedWeightKg.toFixed(1)} kg</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Financial aggregation metrics */}
-                      <div className="grid grid-cols-2 gap-2 text-center text-xs">
-                        <div className="p-2.5 bg-slate-50/50 rounded-xl border">
-                          <span className="text-[10px] text-slate-400 font-semibold block">Peso Total</span>
-                          <span className="font-bold text-slate-800 font-mono">{quote.totalWeightKg.toFixed(2)} kg</span>
-                        </div>
-                        <div className="p-2.5 bg-slate-50/50 rounded-xl border">
-                          <span className="text-[10px] text-slate-400 font-semibold block">Preço Final</span>
-                          <span className="font-bold text-slate-900 font-mono">R$ {quote.totalPriceBrl.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                        </div>
-                      </div>
+                    {/* Header title */}
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-bold text-zinc-450 tracking-wider uppercase">Painel de Configuração</span>
+                      <h3 className="text-lg font-black font-condensed tracking-wide">Dados da Serralheria</h3>
                     </div>
 
-                    {/* Card Actions Row */}
-                    <div className="bg-slate-50 border-t border-slate-100 px-5 py-3.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    {/* Integrated AI assistent inline overlay toggler */}
+                    <details className={`p-4 rounded-2xl border select-none group transition-all duration-300 ${
+                      darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+                    }`}>
+                      <summary className="flex justify-between items-center text-xs font-black uppercase tracking-wider cursor-pointer list-none">
+                        <div className="flex items-center gap-2 text-amber-500">
+                          <Bot className="w-4.5 h-4.5 text-amber-500" />
+                          <span>FALAR COM MEU ASSISTENTE AI</span>
+                        </div>
+                        <ChevronRight className="w-4.5 h-4.5 group-open:rotate-90 transition-transform" />
+                      </summary>
                       
-                      {/* Delete */}
-                      <button
-                        onClick={() => handleDeleteSavedQuote(quote.id)}
-                        className="text-red-500 hover:text-red-700 font-bold hover:bg-red-50 p-2 rounded-xl transition"
-                        title="Excluir do histórico"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="pt-4 h-[420px] rounded-xl overflow-hidden border dark:border-zinc-800 mt-2 bg-zinc-950">
+                        <AcoAssistant />
+                      </div>
+                    </details>
 
-                      <div className="flex items-center space-x-2">
-                        {/* Send WhatsApp */}
-                        <button
-                          onClick={() => {
-                            // Load payload momentarily
-                            setQuoteCode(quote.id);
-                            setCustomerName(quote.customerName);
-                            setCustomerPhone(quote.customerPhone);
-                            setCustomerCompany(quote.customerCompany || "");
-                            setNotes(quote.notes || "");
-                            setItems(quote.items);
-                            setDiscountPercent(quote.discountPercent);
-                            setAdditionPercent(quote.additionPercent);
-                            setFreightCost(quote.freightCost);
-                            setValidityDays(quote.validityDays);
-                            
-                            setTimeout(() => {
-                              handleSendWhatsApp();
-                            }, 100);
-                          }}
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-1.5 px-3 rounded-lg text-xs transition flex items-center space-x-1"
-                        >
-                          <Send className="w-3 h-3" />
-                          <span>WhatsApp</span>
-                        </button>
-
-                        {/* PDF View */}
-                        <button
-                          onClick={() => {
-                            // Load payload momentarily
-                            setQuoteCode(quote.id);
-                            setCustomerName(quote.customerName);
-                            setCustomerPhone(quote.customerPhone);
-                            setCustomerCompany(quote.customerCompany || "");
-                            setNotes(quote.notes || "");
-                            setItems(quote.items);
-                            setDiscountPercent(quote.discountPercent);
-                            setAdditionPercent(quote.additionPercent);
-                            setFreightCost(quote.freightCost);
-                            setValidityDays(quote.validityDays);
-                            
-                            setShowPreviewModal(true);
-                          }}
-                          className="bg-white hover:bg-slate-100 text-slate-700 border font-bold py-1.5 px-3 rounded-lg text-xs transition flex items-center space-x-1"
-                        >
-                          <Printer className="w-3 h-3 text-slate-500" />
-                          <span>Ver PDF</span>
-                        </button>
-
-                        {/* Reload back for edit / duplicate */}
-                        <button
-                          onClick={() => {
-                            handleLoadQuote(quote);
-                          }}
-                          className="bg-orange-500 hover:bg-orange-600 text-slate-950 font-black py-1.5 px-3 rounded-lg text-xs transition flex items-center space-x-1"
-                          title="Alterna para o Painel ativo carregando este orçamento para edição ou emissão de outro"
-                        >
-                          <Calculator className="w-3 h-3 stroke-[2.5]" />
-                          <span>Editar</span>
-                        </button>
+                    {/* Company Configuration credentials form */}
+                    <form onSubmit={saveCompanyConfig} className={`p-4 rounded-2xl border space-y-3.5 text-xs ${
+                      darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+                    }`}>
+                      <span className="text-[11px] font-black text-zinc-400 uppercase tracking-widest block border-b pb-1 dark:border-zinc-800">Definições da Oficina</span>
+                      
+                      <div className="space-y-1">
+                        <label className="text-[11px] text-zinc-400 font-bold">Nome Fantasia Comercial</label>
+                        <input 
+                          type="text" 
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
+                          className="w-full bg-zinc-100 dark:bg-zinc-950 border rounded-lg px-2.5 py-1.5 focus:border-amber-400 outline-none font-bold"
+                        />
                       </div>
 
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-1">
+                          <label className="text-[11px] text-zinc-400 font-bold">Seu Nome (Dono)</label>
+                          <input 
+                            type="text" 
+                            value={ownerName}
+                            onChange={(e) => setOwnerName(e.target.value)}
+                            className="w-full bg-zinc-100 dark:bg-zinc-950 border rounded-lg px-2.5 py-1.5 outline-none font-semibold"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[11px] text-zinc-400 font-bold">WhatsApp Contato</label>
+                          <input 
+                            type="text" 
+                            value={companyPhone}
+                            onChange={(e) => setCompanyPhone(e.target.value)}
+                            className="w-full bg-zinc-100 dark:bg-zinc-950 border rounded-lg px-2.5 py-1.5 outline-none font-semibold"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] text-zinc-400 font-bold">CNPJ de Faturamento</label>
+                        <input 
+                          type="text" 
+                          value={companyCNPJ}
+                          onChange={(e) => setCompanyCNPJ(e.target.value)}
+                          className="w-full bg-zinc-100 dark:bg-zinc-950 border rounded-lg px-2.5 py-1.5 outline-none"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[11px] text-zinc-400 font-bold">Logotipo Empresa (Cópia Base64 / URL)</label>
+                        <input 
+                          type="text" 
+                          value={companyLogo}
+                          onChange={(e) => setCompanyLogo(e.target.value)}
+                          placeholder="Fórmula de imagem Base64"
+                          className="w-full bg-zinc-100 dark:bg-zinc-950 border rounded-lg px-2.5 py-1.5 outline-none truncate"
+                        />
+                      </div>
+
+                      <button 
+                        type="submit"
+                        className="w-full py-2.5 bg-amber-400 hover:bg-amber-500 text-zinc-950 font-bold rounded-xl transition"
+                      >
+                        Salvar Informações da Empresa
+                      </button>
+                    </form>
+
+                    {/* Pricing Plans option cards */}
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block">Licenciamento Premium</span>
+                      <CalhaZapPlanos 
+                        verificarAtivo={verificarAtivo}
+                        ativarAcessoPlano={ativarAcessoPlano}
+                      />
                     </div>
+
                   </div>
-                ))}
+                )}
+
+                {/* TAB 6: NOTIFICATIONS FULL SCREEN SCREENSHOTS 3 & 4 */}
+                {viewportTab === 'notif' && (
+                  <div className="space-y-4 animate-fade-in pb-16">
+                    
+                    {/* Mock header containing Back link */}
+                    <div className="flex justify-between items-center bg-zinc-100/50 dark:bg-zinc-900/50 p-2 rounded-2xl">
+                      <button 
+                        onClick={() => setViewportTab('home')}
+                        className="flex items-center gap-1 text-xs text-amber-500 font-bold cursor-pointer"
+                      >
+                        <ArrowLeft className="w-4.5 h-4.5" />
+                        <span>Voltar</span>
+                      </button>
+                      <h3 className="text-xs font-black uppercase text-zinc-400 tracking-wider">Notificações</h3>
+                      <button 
+                        onClick={markAllNotifsRead}
+                        className="text-[10px] text-zinc-500 font-bold hover:text-white cursor-pointer"
+                      >
+                        Marcar lidas
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      {notifs.map((n) => (
+                        <div 
+                          key={n.id}
+                          className={`p-3.5 rounded-2xl border transition-all flex items-start justify-between gap-3 ${
+                            n.read 
+                              ? (darkMode ? 'bg-zinc-900/40 border-zinc-900 text-zinc-400' : 'bg-zinc-50/50 border-zinc-100 text-zinc-500')
+                              : (darkMode ? 'bg-zinc-900 border-zinc-800 text-white font-semibold' : 'bg-white border-zinc-200 text-zinc-900 font-semibold shadow-xs')
+                          }`}
+                        >
+                          <div className="flex items-start gap-2.5">
+                            {/* Color indicator icons based on type */}
+                            <span className="text-lg py-0.5 select-none shrink-0">
+                              {n.type === 'approved' && '🟢'}
+                              {n.type === 'comment' && '🔵'}
+                              {n.type === 'reminder' && '🟡'}
+                              {n.type === 'payment' && '💵'}
+                              {n.type === 'expiring' && '🔴'}
+                              {n.type === 'whatsapp' && '💬'}
+                            </span>
+                            <div className="space-y-0.5">
+                              <h5 className="text-[11.5px] leading-snug tracking-tight font-black">{n.title}</h5>
+                              <p className="text-[10px] leading-relaxed opacity-90">{n.desc}</p>
+                              <span className="text-[9px] text-zinc-500 block font-normal pt-0.5">{n.time}</span>
+                            </div>
+                          </div>
+
+                          <button 
+                            onClick={() => removeNotif(n.id)} 
+                            className="text-zinc-500 hover:text-zinc-300 p-1 shrink-0 cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                  </div>
+                )}
+
               </div>
-            )}
-          </div>
-        )}
 
-        {/* TAB 4: GEMINI ASSISTANT */}
-        {activeTab === 'ai' && (
-          <div className="max-w-4xl mx-auto h-[600px]">
-            <AcoAssistant />
-          </div>
-        )}
+              {/* PERSISTENT MOBILE BOTTOM NAVIGATION TAB BAR (Exactly matching screen layouts) */}
+              <div className={`absolute bottom-0 left-0 w-full px-5 py-2.5 flex justify-between items-center z-30 border-t ${
+                darkMode ? 'bg-zinc-950 border-zinc-900' : 'bg-white border-zinc-200'
+              }`}>
+                
+                {/* 1. Home Tab icon */}
+                <button 
+                  onClick={() => {
+                    setSelectedCalc(null);
+                    setViewportTab('home');
+                  }}
+                  className={`flex flex-col items-center gap-1 cursor-pointer transition select-none ${
+                    viewportTab === 'home' ? 'text-amber-500 font-extrabold' : 'text-zinc-450 hover:text-zinc-650'
+                  }`}
+                >
+                  <History className="w-5 h-5 stroke-[2.2]" />
+                  <span className="text-[9px] font-bold tracking-wide">Home</span>
+                </button>
 
-      </main>
+                {/* 2. List Tab icon */}
+                <button 
+                  onClick={() => {
+                    setSelectedCalc(null);
+                    setViewportTab('hist');
+                  }}
+                  className={`flex flex-col items-center gap-1 cursor-pointer transition select-none ${
+                    viewportTab === 'hist' ? 'text-amber-500 font-extrabold' : 'text-zinc-450 hover:text-zinc-650'
+                  }`}
+                >
+                  <FileText className="w-5 h-5 stroke-[2.2]" />
+                  <span className="text-[9px] font-bold tracking-wide">Propostas</span>
+                </button>
 
-      {/* FOOTER */}
-      <footer className="bg-slate-900 text-slate-450 text-xs py-8 border-t border-slate-950 mt-12 print:hidden">
-        <div className="max-w-7xl mx-auto px-4 text-center space-y-2">
-          <p className="font-semibold text-slate-300">Calha Norte • © {new Date().getFullYear()} Soluções Metalúrgicas Avançadas</p>
-          <p>Compatível com tabelas oficiais de pesos teóricos Gerdau, CSN, Tubos de Aço estrutural, Ligas ABNT 1010/1020 e ASTM A36.</p>
+                {/* 3. Central glowing gold floating button "+" triggers orcamento */}
+                <div className="relative top-[-18px] shrink-0">
+                  <button 
+                    onClick={() => {
+                      setWizardStep(1);
+                      setViewportTab('orc');
+                    }}
+                    className="w-13 h-13 bg-amber-400 hover:bg-amber-500 active:scale-90 text-slate-950 rounded-full flex items-center justify-center shadow-lg shadow-amber-500/25 border-4 border-white dark:border-black shrink-0 transition-transform cursor-pointer"
+                  >
+                    <Plus className="w-6.5 h-6.5 stroke-[3]" />
+                  </button>
+                </div>
+
+                {/* 4. Calculator icon tab */}
+                <button 
+                  onClick={() => {
+                    setSelectedCalc(null);
+                    setViewportTab('calc');
+                  }}
+                  className={`flex flex-col items-center gap-1 cursor-pointer transition select-none ${
+                    viewportTab === 'calc' ? 'text-amber-500 font-extrabold' : 'text-zinc-450 hover:text-zinc-650'
+                  }`}
+                >
+                  <Calculator className="w-5 h-5 stroke-[2.2]" />
+                  <span className="text-[9px] font-bold tracking-wide">Cálculos</span>
+                </button>
+
+                {/* 5. Support / Setup tab */}
+                <button 
+                  onClick={() => {
+                    setSelectedCalc(null);
+                    setViewportTab('emp');
+                  }}
+                  className={`flex flex-col items-center gap-1 cursor-pointer transition select-none ${
+                    viewportTab === 'emp' ? 'text-amber-500 font-extrabold' : 'text-zinc-450 hover:text-zinc-650'
+                  }`}
+                >
+                  <Building2 className="w-5 h-5 stroke-[2.2]" />
+                  <span className="text-[9px] font-bold tracking-wide">Empresa</span>
+                </button>
+
+                {/* iPhone swipe bottom pill indicator */}
+                <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-32 h-1 bg-zinc-300 dark:bg-zinc-800 rounded-full select-none" />
+              </div>
+
+            </div>
+          )}
+
         </div>
-      </footer>
 
-      {/* MODAL PRINT PREVIEW SIMULATED PDF OR LETTERHEAD */}
-      {showPreviewModal && (
-        <div className="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white text-slate-900 rounded-3xl w-full max-w-4xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      </div>
+
+      {/* FOOTER PREMIUM ACTIONS SECURITY LOCK OVERLAY MODAL */}
+      {showLock && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="w-full max-w-sm bg-white dark:bg-zinc-900 border-2 border-amber-450 rounded-3xl p-6 text-center space-y-4 shadow-2xl relative animate-scale-up text-zinc-900 dark:text-white">
+            <div className="text-4xl text-center">🔐</div>
+            <h4 className="text-base font-black uppercase tracking-wider leading-tight">{lockTitle}</h4>
+            <p className="text-xs text-zinc-500 leading-normal" dangerouslySetInnerHTML={{ __html: lockSub }}></p>
             
-            {/* Modal header */}
-            <div className="bg-slate-900 text-white px-5 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 print:hidden font-sans">
-              <div className="flex items-center space-x-2">
-                <FileText className="w-5 h-5 text-orange-400" />
-                <span className="font-extrabold text-xs sm:text-sm tracking-wide">Orçamento - {quoteCode}</span>
-              </div>
-              <div className="flex items-center space-x-2 w-full sm:w-auto justify-center sm:justify-end">
-                <button
-                  onClick={triggerBrowserPrint}
-                  className="bg-orange-500 hover:bg-orange-600 text-slate-950 font-black text-xs px-3.5 py-1.5 rounded-xl transition flex items-center justify-center space-x-1"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Imprimir PDF</span>
-                </button>
-                <button
-                  onClick={() => setShowPreviewModal(false)}
-                  className="text-xs px-3.5 py-1.5 rounded-xl text-slate-400 hover:text-white transition"
-                >
-                  Fechar
-                </button>
-              </div>
+            <div className="pt-2 flex flex-col gap-2">
+              <button 
+                onClick={() => {
+                  setShowLock(false);
+                  setViewportTab('emp');
+                }}
+                className="w-full py-3 bg-amber-400 hover:bg-amber-500 text-zinc-950 font-black text-xs rounded-xl transition uppercase tracking-wider cursor-pointer"
+              >
+                Ativar licença grátis agora!
+              </button>
+              <button 
+                onClick={() => setShowLock(false)}
+                className="w-full py-2 bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold text-xs rounded-xl transition uppercase tracking-wider cursor-pointer font-mono"
+              >
+                Voltar à oficina
+              </button>
             </div>
-
-            {/* Print Area - Beautiful Letterhead style doc */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-12 font-sans" id="quote-print-area">
-              
-              {/* BRAND HEADER LINE */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-slate-900 pb-6 gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-2.5">
-                    <div className="h-9 w-9 bg-slate-900 rounded-xl flex items-center justify-center text-white font-extrabold font-mono text-sm">
-                      CN
-                    </div>
-                    <span className="text-lg font-black uppercase tracking-wider text-slate-900">Calha Norte</span>
-                  </div>
-                  <p className="text-xs text-slate-500">Distribuição Oficial Gerdau & Chapas CSN</p>
-                </div>
-                
-                <div className="text-left sm:text-right text-xs text-slate-650 space-y-0.5">
-                  <p className="font-bold text-slate-900">PROPOSTA COMERCIAL: {quoteCode}</p>
-                  <p>Data de Emissão: {new Date().toLocaleDateString('pt-BR')}</p>
-                  <p>Validade: {validityDays} dias</p>
-                </div>
-              </div>
-
-              {/* CLIENT INFO BLOCK */}
-              <div className="my-6 p-4 bg-slate-50 border border-slate-100 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                <div>
-                  <p className="font-black text-slate-450 uppercase tracking-wider mb-1">Destinatário / Comprador</p>
-                  <p className="text-sm font-bold text-slate-800">{customerName || "Consumidor Final"}</p>
-                  {customerCompany && <p className="text-slate-600">{customerCompany}</p>}
-                </div>
-                <div className="text-left sm:text-right">
-                  <p className="font-black text-slate-450 uppercase tracking-wider mb-1">Canal de Atendimento / Contato</p>
-                  <p className="text-sm font-bold text-slate-800">{customerPhone || "(Não informado)"}</p>
-                </div>
-              </div>
-
-              {/* PRODUCTS LIST TABLE */}
-              <div className="my-6 border border-slate-200 rounded-2xl overflow-hidden overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-slate-100 text-slate-700 border-b border-slate-200">
-                      <th className="p-3 font-bold text-center w-12">Item</th>
-                      <th className="p-3 font-bold">Especificação do Material / Dimensões</th>
-                      <th className="p-3 font-bold text-center">Referência Norma</th>
-                      <th className="p-3 font-bold text-center w-16">Qtd</th>
-                      <th className="p-3 font-bold text-right w-24">Peso Total</th>
-                      <th className="p-3 font-bold text-right w-24">Preço/Kg</th>
-                      <th className="p-3 font-bold text-right w-28">Valor Total</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-150">
-                    {items.map((item, idx) => {
-                      let sizingLabel = '';
-                      if (item.product.category === 'sheets') {
-                        sizingLabel = `Chapa ${item.thicknessMm?.toFixed(2)}mm x ${item.widthM?.toFixed(1)}m x ${item.lengthM?.toFixed(1)}m`;
-                      } else if (item.product.category === 'tubes') {
-                        sizingLabel = `Tubo Parede ${item.thicknessMm?.toFixed(2)}mm x Barra ${item.lengthM?.toFixed(1)}m`;
-                      } else if (item.product.category === 'calhas_telhas') {
-                        sizingLabel = `Corte/Vão: ${item.lengthM?.toFixed(1)}m x Medida/Dev: ${item.widthM?.toFixed(2)}m (Esp: ${item.thicknessMm?.toFixed(2)}mm)`;
-                      } else if (item.lengthM) {
-                        sizingLabel = `Barra de ${item.lengthM?.toFixed(1)}m`;
-                      }
-
-                      return (
-                        <tr key={item.id} className="text-slate-800 hover:bg-slate-50/40">
-                          <td className="p-3 font-semibold font-mono text-center">{idx + 1}</td>
-                          <td className="p-3 font-bold text-slate-900">
-                            <div>{item.product.name}</div>
-                            {sizingLabel && (
-                              <div className="text-[10px] text-slate-400 font-normal mt-0.5">Dimensões: {sizingLabel}</div>
-                            )}
-                          </td>
-                          <td className="p-3 text-center text-slate-500">{item.product.standards}</td>
-                          <td className="p-3 text-center font-bold">{item.quantity}</td>
-                          <td className="p-3 text-right font-mono font-medium">{item.calculatedWeightKg.toFixed(2)} kg</td>
-                          <td className="p-3 text-right font-mono">R$ {item.unitPrice.toFixed(2)}</td>
-                          <td className="p-3 text-right font-bold font-mono text-slate-900">
-                            R$ {item.totalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* FINANCIAL & LOGISTICAL REPORT SUMS */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start mt-8 border-t border-slate-200 pt-6">
-                
-                {/* Delivery recommendations */}
-                <div className="space-y-3 text-xs text-slate-650">
-                  <p className="font-black text-slate-450 uppercase tracking-wider">Laudo Geral de Pesagem & Transporte</p>
-                  <div>
-                    <span className="font-semibold text-slate-800 block">Sugerido para Envio:</span>
-                    <span className="font-bold text-orange-650">{recommendedTruck.name}</span>
-                  </div>
-                  <p className="leading-relaxed">
-                    Carga aferida em <strong className="text-slate-900 font-mono">{totalWeightKg.toFixed(2)} kg</strong>. 
-                    Recomenda-se amarração segura conforme resoluções de trânsito rodoviário nacional do CONTRAN para materiais em ferro e aço.
-                  </p>
-                  {notes && (
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-150 text-[11px] text-slate-700 italic">
-                      <strong>Observações:</strong> {notes}
-                    </div>
-                  )}
-                </div>
-
-                {/* Totals table */}
-                <div className="space-y-2 text-xs text-slate-700 max-w-sm ml-auto w-full">
-                  <div className="flex justify-between py-1 border-b">
-                    <span>Soma dos Materiais:</span>
-                    <span className="font-bold font-mono">R$ {subtotalPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  </div>
-                  {discountPercent > 0 && (
-                    <div className="flex justify-between py-1 border-b text-emerald-600">
-                      <span>Desconto ({discountPercent}%):</span>
-                      <span className="font-bold font-mono">- R$ {discountAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
-                  )}
-                  {additionPercent > 0 && (
-                    <div className="flex justify-between py-1 border-b">
-                      <span>Taxas / Adicionais ({additionPercent}%):</span>
-                      <span className="font-bold font-mono">+ R$ {additionAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
-                  )}
-                  {freightCost > 0 && (
-                    <div className="flex justify-between py-1 border-b">
-                      <span>Custo do Frete:</span>
-                      <span className="font-bold font-mono">R$ {freightCost.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between py-2 text-sm text-slate-900 font-black border-t-2 border-slate-900">
-                    <span>PREÇO FINAL OFERECIDO:</span>
-                    <span className="font-mono text-base">R$ {totalPriceBrl.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* PRINT ASSIGNATURE BLOCK */}
-              <div className="mt-16 pt-12 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-450 gap-8">
-                <div className="text-center w-52">
-                  <div className="border-b border-slate-350 h-5 mb-1.5"></div>
-                  <span>{customerName || "Assinatura do Cliente"}</span>
-                </div>
-                <div className="text-center w-52">
-                  <div className="border-b border-slate-350 h-5 mb-1.5"></div>
-                  <span>Vendedor Autorizado</span>
-                </div>
-              </div>
-
-            </div>
-
           </div>
         </div>
       )}

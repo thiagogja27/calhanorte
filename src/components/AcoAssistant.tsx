@@ -9,7 +9,7 @@ export default function AcoAssistant() {
     {
       id: "welcome",
       role: "assistant",
-      text: "Olá! Sou o **AssisteAço**, seu consultor virtual especialista em estruturas metálicas, normas técnicas Gerdau/CSN e pesagens. \n\nEstou aqui para ajudar você a calcular pesos de materiais difíceis, entender especificações de ligas (SAE 1020, ASTM A36) ou esclarecer dúvidas de serralheria e obras. Como posso lhe ajudar hoje?",
+      text: "Olá! Sou o **Especialista AI Calheiro**, seu consultor virtual especialista em calhas, rufos, chapas e bobinas metálicas (Galvanizado, Galvalume, Alumínio e Pré-pintados). \n\nEstou pronto para lhe ajudar a descobrir fatores de peso de materiais por metro linear, entender as espessuras ideais (como Chapas 28, 26, 24 e 22), dar conselhos sobre declividade e queda de água em telhados ou otimização de slitting de bobinas. Como posso lhe ajudar no seu orçamento hoje?",
       timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     }
   ]);
@@ -19,10 +19,10 @@ export default function AcoAssistant() {
   const messageEndRef = useRef<HTMLDivElement>(null);
 
   const SUGGESTIONS = [
-    { label: "Equação de peso da Chapa", prompt: "Qual é a fórmula detalhada de cálculo de peso por metro quadrado de uma chapa de aço e como estimar o peso de chapas xadrez?" },
-    { label: "CA-50 vs CA-60 Gerdau", prompt: "Qual a diferença exata de aplicação, resistência mecânica e propriedades do aço Gerdau CA-50 e CA-60 na construção civil?" },
-    { label: "Viga I / W ideal para mezanino", prompt: "Quais vigas I ou W estruturais da Gerdau costumam ser cotadas para mezanino comercial de carga média (vãos de 4 a 6 metros)?" },
-    { label: "Converter Chapa Calibre 14", prompt: "Qual é a espessura em milímetros de uma chapa calibre 14 (padrão MSG) e o peso teórico por m²?" }
+    { label: "Galvalume vs Galvanizado", prompt: "Qual é a diferença real de durabilidade e custo entre chapas de aço Galvalume e chapas de aço Galvanizado comum para a confecção de calhas de beiral?" },
+    { label: "Peso Chapa 26 de Calha", prompt: "Qual é a espessura exata em milímetros e o peso teórico de um metro linear de fita de chapa 26 com 30 cm de desenvolvimento?" },
+    { label: "Inclinação mínima telha trapezoidal", prompt: "Qual é a inclinação mínima de escoamento recomendada para coberturas residenciais utilizando telhas trapezoidais metálicas de zinco para evitar retorno de água?" },
+    { label: "Otimização de Slitting / Fitas", prompt: "Como posso planejar e otimizar fatias de bobina mãe de 1200mm de largura para fabricar rufos e calhas sem gerar retalhos e descartes?" }
   ];
 
   useEffect(() => {

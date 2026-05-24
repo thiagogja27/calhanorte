@@ -1,4 +1,4 @@
-export type SteelProductCategory = 'sheets' | 'tubes' | 'profiles' | 'rebar' | 'wire_mesh' | 'calhas_telhas';
+export type SteelProductCategory = 'sheets' | 'coils' | 'calhas_rufos' | 'telhas' | 'condutores' | 'chamines' | 'pu40' | 'servicos' | 'extras';
 
 export interface SteelProduct {
   id: string;
