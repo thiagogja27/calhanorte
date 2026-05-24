@@ -58,11 +58,24 @@ export default function App() {
 
   // Watch Authentication State
   useEffect(() => {
+    // Fail-safe: if Firebase auth doesn't resolve in 1.5 seconds (e.g. standard iframe privacy policies),
+    // stop the load spinner so the login screen can be rendered.
+    console.log("Iniciando monitoramento de autenticação Firebase...");
+    const timer = setTimeout(() => {
+      console.warn("Auth initialization timed out (iframe security fallback). Rendering login shell.");
+      setAuthLoading(false);
+    }, 1500);
+
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      console.log("Mudança de estado obtida para o usuário:", authUser?.email || "Nenhum usuário logado");
+      clearTimeout(timer);
       setUser(authUser);
       setAuthLoading(false);
     });
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(timer);
+      unsubscribe();
+    };
   }, []);
 
   // Sync savedQuotes from Realtime Database in Real-time
@@ -108,11 +121,7 @@ export default function App() {
     }
 
     try {
-      if (isRegisterMode) {
-        await createUserWithEmailAndPassword(auth, authEmail, authPassword);
-      } else {
-        await signInWithEmailAndPassword(auth, authEmail, authPassword);
-      }
+      await signInWithEmailAndPassword(auth, authEmail, authPassword);
     } catch (err: any) {
       console.error(err);
       if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
@@ -451,23 +460,11 @@ export default function App() {
                 <div className="w-5 h-5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
               ) : (
                 <>
-                  <span>{isRegisterMode ? "Registrar e Entrar" : "Entrar no Sistema"}</span>
+                  <span>Entrar no Sistema</span>
                 </>
               )}
             </button>
           </form>
-
-          <div className="mt-6 pt-6 border-t border-slate-850 text-center">
-            <button
-              onClick={() => {
-                setIsRegisterMode(!isRegisterMode);
-                setAuthError("");
-              }}
-              className="text-xs text-orange-400 hover:text-orange-300 font-semibold cursor-pointer underline decoration-dotted underline-offset-4"
-            >
-              {isRegisterMode ? "Já tem registro? Faça login aqui" : "Novo usuário? Registrar nova conta agora"}
-            </button>
-          </div>
 
         </div>
 

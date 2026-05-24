@@ -14,11 +14,11 @@ const firebaseConfig = {
   measurementId: "G-CNKFSMSE00"
 };
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+const app = getApps().find(a => a.name === 'calhanorte-app') || initializeApp(firebaseConfig, 'calhanorte-app');
 
 let databaseInstance;
 try {
-  databaseInstance = getDatabase(app);
+  databaseInstance = getDatabase(app, firebaseConfig.databaseURL);
 } catch (e) {
   console.error("Realtime Database initialization failed:", e);
   // Fail-safe mock/null so the application bundle doesn't crash on import

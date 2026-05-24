@@ -1,9 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
-
-const App = dynamic(() => import("../App"), { ssr: false });
+import React from "react";
+import App from "../App";
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -56,26 +54,11 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 }
 
 export default function Home() {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-950 text-white">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500 mx-auto"></div>
-          <p className="text-slate-450 font-medium font-mono text-xs uppercase tracking-widest animate-pulse">Iniciando Calha Norte PRO...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <ErrorBoundary>
       <App />
     </ErrorBoundary>
   );
 }
+
+
