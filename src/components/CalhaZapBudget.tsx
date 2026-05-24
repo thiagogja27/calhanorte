@@ -419,16 +419,11 @@ export default function CalhaZapBudget({
 
           <table class="footer-tbl">
             <tr>
-              <td style="width: 60%; vertical-align: top;">
+              <td style="width: 100%; vertical-align: top;">
                 <strong>Condições de Pagamento:</strong><br/>
                 ${paymentCondition}<br/><br/>
                 <strong>Termo de Compromisso:</strong><br/>
                 ${notes}
-              </td>
-              <td style="text-align: center; vertical-align: bottom;">
-                <br/><br/><br/>
-                <div style="border-top: 1px solid #1a1a1a; width: 200px; margin: 0 auto;"></div>
-                <div style="font-size: 10px; font-weight: bold; color: #3a3a3a; margin-top: 4px;">Assinatura do Responsável</div>
               </td>
             </tr>
           </table>

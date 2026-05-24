@@ -51,11 +51,11 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(false);
 
   // Company Details persistent states
-  const [companyName, setCompanyName] = useState('CalhaFer Ltda.');
-  const [ownerName, setOwnerName] = useState('Carlos');
-  const [companyCNPJ, setCompanyCNPJ] = useState('12.345.678/0001-99');
-  const [companyPhone, setCompanyPhone] = useState('(11) 99876-5432');
-  const [companyCityState, setCompanyCityState] = useState('São Paulo - SP');
+  const [companyName, setCompanyName] = useState('Minha Empresa de Calhas');
+  const [ownerName, setOwnerName] = useState('Responsável');
+  const [companyCNPJ, setCompanyCNPJ] = useState('');
+  const [companyPhone, setCompanyPhone] = useState('');
+  const [companyCityState, setCompanyCityState] = useState('');
   const [companyLogo, setCompanyLogo] = useState(''); // Base64 url
 
   // Saved quotes from database
@@ -162,14 +162,7 @@ export default function App() {
   // -------------------------------------------------------------
   // INTERACTIVE NOTIFICATIONS ALARM STATE
   // -------------------------------------------------------------
-  const [notifs, setNotifs] = useState([
-    { id: '1', type: 'approved', title: 'Orçamento aprovado', desc: 'Ana Rodrigues aprovou o orçamento de R$ 2.450,00 para instalação.', time: 'Há 15 min', read: false },
-    { id: '2', type: 'comment', title: 'Comentário sobre obra', desc: 'Construtora JB comentou no projeto de slitting #042 do corte 30.', time: 'Há 1 hora', read: false },
-    { id: '3', type: 'reminder', title: 'Lembrete de instalação', desc: 'Instalação de Calhas na rua das Palmeiras agendada para amanhã às 14h00.', time: 'Há 3 horas', read: false },
-    { id: '4', type: 'payment', title: 'Instrução de Pix Recebida', desc: 'Marcos Ferreira realizou adiantamento de 50% (R$ 1.890,00).', time: 'Ontem', read: true },
-    { id: '5', type: 'expiring', title: 'Orçamento expirando', desc: 'Cotação de bobinas pré-pintadas #038 vencerá em 2 dias.', time: 'Ontem', read: true },
-    { id: '6', type: 'whatsapp', title: 'Mensagem do WhatsApp', desc: 'Renata Costa enviou confirmação do frete das chapas de alumínio.', time: '2 dias atrás', read: true }
-  ]);
+  const [notifs, setNotifs] = useState<{ id: string; type: string; title: string; desc: string; time: string; read: boolean; }[]>([]);
 
   const unreadCount = notifs.filter(n => !n.read).length;
 
@@ -490,8 +483,6 @@ export default function App() {
           <div style="clear: both;"></div>
           <div style="margin-top: 50px; font-size: 10px; color: #71717a; border-top:1px solid #e4e4e7; pt-4">
              Observações: ${oldQuote.notes || 'Materiais para fixação inclusos.'}
-             <br /><br />
-             Assinatura do Responsável Calheiro: _________________________________________________
           </div>
         </body>
       </html>
@@ -865,38 +856,46 @@ export default function App() {
                     {/* Section: "Para Hoje" Scheduled list */}
                     <div className="space-y-2">
                       <div className="flex justify-between items-center font-bold">
-                        <span className="text-xs uppercase tracking-wider text-zinc-500">Agendamentos</span>
-                        <button onClick={() => alert("Sua Agenda de Serviços está synced com Google Calendar.")} className="text-xs text-amber-500 cursor-pointer">Agenda</button>
+                        <span className="text-xs uppercase tracking-wider text-zinc-500">Instalações & Visitas</span>
+                        <button onClick={() => setViewportTab('hist')} className="text-xs text-amber-500 cursor-pointer">Ver Todos</button>
                       </div>
 
                       <div className="space-y-2">
-                        {/* Event A */}
-                        <div className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
-                          darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
-                        }`}>
-                          <div className="flex items-center gap-3">
-                            <span className="px-2.5 py-1.5 bg-amber-100 text-amber-800 rounded-xl text-[10px] font-black font-condensed">14h00</span>
-                            <div>
-                              <h5 className="text-xs font-bold">Ana Rodrigues</h5>
-                              <p className="text-[10px] text-zinc-500">Instalação • Calha + Rufo</p>
-                            </div>
+                        {quotes.filter(q => q.status === 'pendente' || q.status === 'aprovado').length === 0 ? (
+                          <div className={`p-4 text-center rounded-2xl border border-dashed text-xs text-zinc-400 font-bold ${
+                            darkMode ? 'border-zinc-800 bg-zinc-950/40' : 'border-zinc-200 bg-zinc-50/50'
+                          }`}>
+                            Crie ou salve um orçamento para gerenciar instalações ativas aqui.
                           </div>
-                          <span className="text-[9px] bg-yellow-100/50 text-yellow-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider select-none shrink-0 border border-yellow-250">PENDENTE</span>
-                        </div>
-
-                        {/* Event B */}
-                        <div className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
-                          darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
-                        }`}>
-                          <div className="flex items-center gap-3">
-                            <span className="px-2.5 py-1.5 bg-sky-100 text-sky-800 rounded-xl text-[10px] font-black font-condensed">16h30</span>
-                            <div>
-                              <h5 className="text-xs font-bold">Construtora JB</h5>
-                              <p className="text-[10px] text-zinc-500">Vistoria • Estrutura de slitting</p>
+                        ) : (
+                          quotes.filter(q => q.status === 'pendente' || q.status === 'aprovado').slice(0, 2).map((q) => (
+                            <div 
+                              key={q.id}
+                              className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
+                                darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 truncate">
+                                <span className={`px-2 py-1 rounded-xl text-[9px] font-black shrink-0 ${
+                                  q.status === 'aprovado' ? 'bg-emerald-100 text-emerald-850' : 'bg-amber-100 text-amber-850'
+                                }`}>
+                                  {q.date?.slice(0, 5) || 'Hoje'}
+                                </span>
+                                <div className="truncate">
+                                  <h5 className="text-xs font-bold truncate">{q.customerName}</h5>
+                                  <p className="text-[10px] text-zinc-500 truncate">{q.customerAddress || 'Oficina / Balcão'}</p>
+                                </div>
+                              </div>
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider shrink-0 border ${
+                                q.status === 'aprovado' 
+                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
+                                  : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                              }`}>
+                                {q.status === 'aprovado' ? 'APROVADO' : 'PENDENTE'}
+                              </span>
                             </div>
-                          </div>
-                          <span className="text-[9px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold uppercase tracking-wider select-none shrink-0 border border-blue-200">AGENDADO</span>
-                        </div>
+                          ))
+                        )}
                       </div>
                     </div>
 
@@ -905,19 +904,25 @@ export default function App() {
                       <div className={`p-3 rounded-2xl text-center border ${
                         darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
                       }`}>
-                        <div className="text-lg font-black font-condensed text-blue-500">7</div>
+                        <div className="text-lg font-black font-condensed text-blue-500">
+                          {quotes.filter(q => q.status === 'aprovado' || q.status === 'pago').length}
+                        </div>
                         <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wide">Obras Ativas</div>
                       </div>
                       <div className={`p-3 rounded-2xl text-center border ${
                         darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
                       }`}>
-                        <div className="text-lg font-black font-condensed text-amber-500">12</div>
+                        <div className="text-lg font-black font-condensed text-amber-500">
+                          {quotes.length}
+                        </div>
                         <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wide">Orçamentos</div>
                       </div>
                       <div className={`p-3 rounded-2xl text-center border ${
                         darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
                       }`}>
-                        <div className="text-lg font-black font-condensed text-emerald-500">3</div>
+                        <div className="text-lg font-black font-condensed text-emerald-500">
+                          {quotes.filter(q => q.status === 'aprovado').length}
+                        </div>
                         <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wide">Aprovados</div>
                       </div>
                     </div>
@@ -1901,40 +1906,50 @@ export default function App() {
                     </div>
 
                     <div className="space-y-2">
-                      {notifs.map((n) => (
-                        <div 
-                          key={n.id}
-                          className={`p-3.5 rounded-2xl border transition-all flex items-start justify-between gap-3 ${
-                            n.read 
-                              ? (darkMode ? 'bg-zinc-900/40 border-zinc-900 text-zinc-400' : 'bg-zinc-50/50 border-zinc-100 text-zinc-500')
-                              : (darkMode ? 'bg-zinc-900 border-zinc-800 text-white font-semibold' : 'bg-white border-zinc-200 text-zinc-900 font-semibold shadow-xs')
-                          }`}
-                        >
-                          <div className="flex items-start gap-2.5">
-                            {/* Color indicator icons based on type */}
-                            <span className="text-lg py-0.5 select-none shrink-0">
-                              {n.type === 'approved' && '🟢'}
-                              {n.type === 'comment' && '🔵'}
-                              {n.type === 'reminder' && '🟡'}
-                              {n.type === 'payment' && '💵'}
-                              {n.type === 'expiring' && '🔴'}
-                              {n.type === 'whatsapp' && '💬'}
-                            </span>
-                            <div className="space-y-0.5">
-                              <h5 className="text-[11.5px] leading-snug tracking-tight font-black">{n.title}</h5>
-                              <p className="text-[10px] leading-relaxed opacity-90">{n.desc}</p>
-                              <span className="text-[9px] text-zinc-500 block font-normal pt-0.5">{n.time}</span>
-                            </div>
-                          </div>
-
-                          <button 
-                            onClick={() => removeNotif(n.id)} 
-                            className="text-zinc-500 hover:text-zinc-300 p-1 shrink-0 cursor-pointer"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
+                      {notifs.length === 0 ? (
+                        <div className={`p-8 text-center border border-dashed rounded-3xl ${
+                          darkMode ? 'border-zinc-800 bg-zinc-950/40 select-none' : 'border-zinc-200 bg-zinc-50/50 select-none'
+                        }`}>
+                          <Bell className="w-8 h-8 mx-auto text-zinc-400 mb-2 stroke-[1.5]" />
+                          <p className="text-xs font-bold text-zinc-400">Tudo limpo por aqui!</p>
+                          <p className="text-[10px] text-zinc-500 mt-1">Nenhuma notificação recente pendente.</p>
                         </div>
-                      ))}
+                      ) : (
+                        notifs.map((n) => (
+                          <div 
+                            key={n.id}
+                            className={`p-3.5 rounded-2xl border transition-all flex items-start justify-between gap-3 ${
+                              n.read 
+                                ? (darkMode ? 'bg-zinc-900/40 border-zinc-900 text-zinc-400' : 'bg-zinc-50/50 border-zinc-100 text-zinc-500')
+                                : (darkMode ? 'bg-zinc-900 border-zinc-800 text-white font-semibold' : 'bg-white border-zinc-200 text-zinc-900 font-semibold shadow-xs')
+                            }`}
+                          >
+                            <div className="flex items-start gap-2.5">
+                              {/* Color indicator icons based on type */}
+                              <span className="text-lg py-0.5 select-none shrink-0">
+                                {n.type === 'approved' && '🟢'}
+                                {n.type === 'comment' && '🔵'}
+                                {n.type === 'reminder' && '🟡'}
+                                {n.type === 'payment' && '💵'}
+                                {n.type === 'expiring' && '🔴'}
+                                {n.type === 'whatsapp' && '💬'}
+                              </span>
+                              <div className="space-y-0.5">
+                                <h5 className="text-[11.5px] leading-snug tracking-tight font-black">{n.title}</h5>
+                                <p className="text-[10px] leading-relaxed opacity-90">{n.desc}</p>
+                                <span className="text-[9px] text-zinc-500 block font-normal pt-0.5">{n.time}</span>
+                              </div>
+                            </div>
+
+                            <button 
+                              onClick={() => removeNotif(n.id)} 
+                              className="text-zinc-500 hover:text-zinc-300 p-1 shrink-0 cursor-pointer"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))
+                      )}
                     </div>
 
                   </div>
