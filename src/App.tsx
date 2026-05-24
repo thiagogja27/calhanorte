@@ -40,6 +40,33 @@ export default function App() {
   const [authError, setAuthError] = useState("");
   const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
 
+  // Real Camera capture & file upload ref and handlers
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoInfo, setPhotoInfo] = useState<{ name: string; size: string } | null>(null);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const sizeInKB = (file.size / 1024).toFixed(0);
+      setPhotoInfo({
+        name: file.name,
+        size: `${sizeInKB} KB`
+      });
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setWPhoto(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const triggerCameraInput = () => {
+    if (photoInputRef.current) {
+      photoInputRef.current.click();
+    }
+  };
+
   // Active workspace settings (mapped to iPhone Viewport Tabs)
   // 'home' = Dashboard, 'orc' = 5-Step Wizard, 'hist' = Saved List, 'calc' = 2x2 calculators grid, 'emp' = settings/plans/AI
   const [viewportTab, setViewportTab] = useState<'home' | 'orc' | 'hist' | 'calc' | 'emp' | 'notif'>('home');
@@ -62,7 +89,7 @@ export default function App() {
   const [quotes, setQuotes] = useState<any[]>([]);
 
   // Premium Activation State
-  const [czAtivo, setCzAtivo] = useState(false);
+  const [czAtivo, setCzAtivo] = useState(true);
 
   // Lock Overlay Dialog State
   const [showLock, setShowLock] = useState(false);
@@ -231,10 +258,7 @@ export default function App() {
       setQuotes(arr.reverse()); // Put newest first
     });
 
-    try {
-      const ok = localStorage.getItem('cz_ativo') === '1';
-      setCzAtivo(ok);
-    } catch (_) {}
+    setCzAtivo(true);
 
     return () => {
       unsubCompany();
@@ -282,13 +306,7 @@ export default function App() {
 
   // Premium Activation
   const verificarAtivo = (): boolean => {
-    try {
-      const val = localStorage.getItem('cz_ativo') === '1';
-      setCzAtivo(val);
-      return val;
-    } catch (_) {
-      return false;
-    }
+    return true;
   };
 
   const exibirLock = (ttl: string, sub: string) => {
@@ -492,12 +510,6 @@ export default function App() {
     setTimeout(() => { printWin.print(); }, 800);
   };
 
-  // Simulated Media Upload
-  const triggerMockUpload = () => {
-    alert("Simulando câmera do iPhone! Foto da obra carregada com sucesso.");
-    setWPhoto("https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&auto=format&fit=crop");
-  };
-
   // Add Item actions to Step arrays
   const addTileToStep = () => {
     const area = tileQty * tileLen;
@@ -604,178 +616,286 @@ export default function App() {
     );
   }
 
-  return (
-    <div className={`min-h-screen bg-slate-950 flex flex-col items-center justify-center p-0 md:p-6 transition-colors duration-300 font-sans ${darkMode ? 'dark text-zinc-100' : 'text-zinc-900'}`}>
-      
-      {/* Absolute Header for Desktop View only */}
-      <div className="hidden md:flex items-center gap-6 justify-between w-full max-w-4xl px-4 py-3 border-b border-zinc-800/60 mb-6 font-mono text-xs text-zinc-500 shrink-0">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>CalhaZap Cloud: Conectado</span>
-          <span className="mx-2">|</span>
-          <span className="text-zinc-400 font-semibold">{user ? user.email : 'Aguardando Logon'}</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="bg-amber-400/20 text-amber-300 uppercase px-2 py-0.5 rounded text-[10px] font-bold border border-amber-500/30">
-            {czAtivo ? '⭐ PLANO PREMIUM ATIVO' : 'TRIAL ATIVO - 10 DIAS'}
-          </span>
-          {user && (
-            <button 
-              onClick={handleSignOut}
-              className="flex items-center gap-1.5 px-2 py-1 bg-zinc-800 text-zinc-300 hover:text-white rounded border border-zinc-700 hover:border-zinc-500 transition cursor-pointer"
+  // USER NOT AUTHENTICATED: Beautiful Full Page Login Grid
+  if (!user) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center p-4 transition-colors duration-300 font-sans ${
+        darkMode ? 'dark bg-zinc-950 text-white' : 'bg-[#faf9f6]'
+      }`}>
+        <div className={`w-full max-w-md p-8 rounded-3xl border shadow-xl flex flex-col items-center relative transition-all duration-300 ${
+          darkMode ? 'bg-zinc-900/60 border-zinc-800' : 'bg-white border-zinc-200'
+        }`}>
+          {/* Logo, title and description */}
+          <div className="text-center space-y-2.5 mb-8 w-full">
+            <div className="w-14 h-14 bg-amber-400 rounded-2xl flex items-center justify-center mx-auto shadow-md">
+              <SquareTerminal className="w-8 h-8 text-slate-900 stroke-[2.5]" />
+            </div>
+            <h1 className="text-2xl font-black font-condensed uppercase tracking-wide text-zinc-900 dark:text-white">CalhaZap</h1>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs mx-auto leading-normal">
+              Painel Exclusivo de Orçamentos e Cálculos de Chapas, Bobinas, Calhas e Rufos
+            </p>
+          </div>
+
+          <form onSubmit={handleAuthSubmit} className="w-full space-y-4">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-zinc-500 uppercase block select-none">E-mail Corporativo</label>
+              <div className="relative">
+                <input
+                  type="email"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  placeholder="Ex: thiago@calhazap.com"
+                  className={`w-full rounded-xl pl-9 pr-3 py-3 text-xs font-semibold outline-none transition ${
+                    darkMode ? 'bg-zinc-900 border border-zinc-800 text-white' : 'bg-stone-50 border border-zinc-300 text-zinc-900 focus:border-amber-400 focus:bg-white'
+                  }`}
+                  required
+                />
+                <Mail className="w-4 h-4 text-zinc-400 absolute left-3 top-3.5 shrink-0" />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-zinc-500 uppercase block select-none">Senha de Segurança</label>
+              <div className="relative">
+                <input
+                  type="password"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  placeholder="Sua senha numérica"
+                  className={`w-full rounded-xl pl-9 pr-3 py-3 text-xs font-semibold outline-none transition ${
+                    darkMode ? 'bg-zinc-900 border border-zinc-800 text-white' : 'bg-stone-50 border border-zinc-300 text-zinc-900 focus:border-amber-400 focus:bg-white'
+                  }`}
+                  required
+                />
+                <Lock className="w-4 h-4 text-zinc-400 absolute left-3 top-3.5 shrink-0" />
+              </div>
+            </div>
+
+            {authError && (
+              <div className="p-3 border border-red-300 text-red-705 text-xs font-semibold rounded-xl leading-normal text-center bg-red-50 text-red-700">
+                ⚠️ {authError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isAuthSubmitting}
+              className="w-full py-3.5 bg-amber-400 hover:bg-amber-500 active:scale-95 text-slate-900 rounded-xl font-bold text-xs transition uppercase tracking-wider shadow cursor-pointer disabled:opacity-50"
             >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Desconectar</span>
+              {isAuthSubmitting ? "Carregando..." : "Entrar na Oficina Segura ✅"}
             </button>
-          )}
+          </form>
+
+          {/* Darkmode toggle on login page */}
+          <button 
+            type="button"
+            onClick={toggleDarkMode}
+            className={`mt-4 p-2 rounded-lg transition-colors cursor-pointer text-xs flex items-center gap-1.5 ${
+              darkMode ? 'text-amber-400 hover:bg-zinc-800' : 'text-zinc-650 hover:bg-stone-100'
+            }`}
+          >
+            {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            <span>Ativar modo {darkMode ? 'Claro' : 'Escuro'}</span>
+          </button>
+
+          <div className="mt-8 pt-4 border-t border-zinc-200 dark:border-zinc-805 text-[10px] text-center text-zinc-500 font-semibold px-2 w-full">
+            Acesso limitado a colaboradores e serralherias autorizadas CalhaZap.
+          </div>
         </div>
       </div>
+    );
+  }
 
-      {/* Interactive Smartphone Chassis Mockup Wrapper */}
-      <div className="w-full md:max-w-[420px] md:h-[860px] bg-zinc-100 dark:bg-black md:rounded-[44px] md:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95)] border-0 md:border-[10px] md:border-zinc-800 relative flex flex-col overflow-hidden transition-all duration-300">
-        
-        {/* iPhone Native Header: Battery, Signal, Dynamic Island */}
-        <div className="bg-zinc-100 dark:bg-black text-black dark:text-white px-5 pt-3 pb-2 flex justify-between items-center text-[11px] font-bold z-30 shrink-0 select-none border-b border-zinc-200/50 dark:border-zinc-900/60 font-mono">
-          <span>14:20</span>
-          
-          {/* Dynamic Island Notch */}
-          <div className="w-24 h-4.5 bg-black rounded-full absolute left-1/2 -translate-x-1/2 top-2.5 flex items-center justify-end pr-3 border border-zinc-900 shadow-inner">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-900 animate-ping"></span>
-          </div>
-          
-          <div className="flex items-center gap-1.5">
-            <Wrench className="w-3 h-3 text-zinc-400 shrink-0" />
-            <span className="text-zinc-400 font-normal">84%</span>
-            <div className="w-5 h-2.5 rounded-sm bg-zinc-300 dark:bg-zinc-800 border border-zinc-400 dark:border-zinc-700 p-0.5 flex">
-              <div className="h-full w-[84%] bg-green-500 rounded-2xs"></div>
+  // USER IS AUTHENTICATED: Render main responsive dashboard workspace
+  return (
+    <div className={`min-h-screen transition-colors duration-300 font-sans flex flex-col md:flex-row ${
+      darkMode ? 'dark bg-zinc-950 text-white' : 'bg-[#faf9f6]'
+    }`}>
+      
+      {/* 1. DESKTOP SIDEBAR (md:flex, hidden on mobile) */}
+      <aside className="hidden md:flex flex-col w-72 bg-white dark:bg-zinc-900 border-r border-zinc-200 dark:border-zinc-805/60 h-screen sticky top-0 shrink-0 z-30">
+        <div className="p-6 border-b border-zinc-250/20 dark:border-zinc-800 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-400 rounded-xl flex items-center justify-center shadow-md shrink-0">
+              <SquareTerminal className="w-6 h-6 text-slate-900 stroke-[2.5]" />
             </div>
+            <div>
+              <h1 className="text-lg font-black font-condensed uppercase tracking-wider block">CalhaZap</h1>
+              <span className="text-[10px] text-zinc-500 font-bold block leading-none">PAINEL DO CALHEIRO</span>
+            </div>
+          </div>
+          <button 
+            onClick={toggleDarkMode}
+            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+              darkMode ? 'bg-zinc-850 text-amber-400 hover:bg-zinc-800' : 'bg-stone-100 text-zinc-650 hover:bg-stone-200'
+            }`}
+          >
+            {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+        </div>
+
+        <div className="p-4 border-b border-zinc-150 dark:border-zinc-850 flex items-center gap-3 bg-zinc-50/50 dark:bg-zinc-950/40 m-4 rounded-2xl">
+          <div className="w-10 h-10 rounded-full bg-amber-500 border border-amber-600/10 text-slate-950 flex items-center justify-center font-black text-sm uppercase select-none font-sans shrink-0">
+            {ownerName ? ownerName.slice(0, 2).toUpperCase() : 'CS'}
+          </div>
+          <div className="truncate flex-grow">
+            <span className="text-[10px] text-zinc-500 block leading-none font-bold font-mono">BEM-VINDO,</span>
+            <span className="font-bold text-xs block leading-tight truncate text-zinc-850 dark:text-zinc-100">{ownerName || 'Carlos'}</span>
+            <span className="text-[9px] text-amber-500 block leading-tight truncate font-bold">{companyName}</span>
           </div>
         </div>
 
-        {/* Dynamic App Area inside Smartphone Viewport */}
-        <div className={`flex-grow flex flex-col overflow-y-auto no-scrollbar relative transition-colors duration-300 ${
-          darkMode ? 'bg-zinc-950 text-white' : 'bg-stone-50 text-stone-900'
-        }`}>
-          
-          {/* USER NOT AUTHENTICATED: Native Phone Form Login */}
-          {!user ? (
-            <div className="flex-grow flex flex-col p-6 justify-center items-center">
-              <div className="text-center space-y-2 mb-6">
-                <div className="w-14 h-14 bg-amber-400 rounded-2xl flex items-center justify-center mx-auto shadow-md">
-                  <SquareTerminal className="w-8 h-8 text-slate-900 stroke-[2.5]" />
-                </div>
-                <h1 className="text-2xl font-black font-condensed uppercase tracking-wide">CalhaZap</h1>
-                <p className="text-xs text-zinc-400 max-w-xs mx-auto">
-                  Painel Exclusivo de Orçamentos e Cálculos de Chapas, Bobinas, Calhas e Rufos
-                </p>
+        {/* Sidebar Links */}
+        <nav className="flex-grow p-4 space-y-1.5 overflow-y-auto no-scrollbar">
+          <button 
+            onClick={() => { setSelectedCalc(null); setViewportTab('home'); }}
+            className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs tracking-medium transition cursor-pointer ${
+              viewportTab === 'home' 
+                ? 'bg-amber-400 text-slate-955 shadow-md font-black' 
+                : 'text-zinc-500 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-855 hover:text-zinc-850 dark:hover:text-white'
+            }`}
+          >
+            <History className="w-4.5 h-4.5" />
+            <span>Dashboard</span>
+          </button>
+
+          <button 
+            onClick={() => { setSelectedCalc(null); setViewportTab('hist'); }}
+            className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs tracking-medium transition cursor-pointer ${
+              viewportTab === 'hist' 
+                ? 'bg-amber-400 text-slate-955 shadow-md font-black' 
+                : 'text-zinc-500 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-855 hover:text-zinc-850 dark:hover:text-white'
+            }`}
+          >
+            <FileText className="w-4.5 h-4.5" />
+            <span>Propostas & Recibos</span>
+          </button>
+
+          <button 
+            onClick={() => { setSelectedCalc(null); setWizardStep(1); setViewportTab('orc'); }}
+            className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs tracking-medium transition cursor-pointer ${
+              viewportTab === 'orc' 
+                ? 'bg-amber-400 text-slate-955 shadow-md font-black' 
+                : 'text-zinc-500 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-855 hover:text-zinc-850 dark:hover:text-white'
+            }`}
+          >
+            <Plus className="w-4.5 h-4.5" />
+            <span>Novo Orçamento</span>
+          </button>
+
+          <button 
+            onClick={() => { setSelectedCalc(null); setViewportTab('calc'); }}
+            className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs tracking-medium transition cursor-pointer ${
+              viewportTab === 'calc' 
+                ? 'bg-amber-400 text-slate-955 shadow-md font-black' 
+                : 'text-zinc-500 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-855 hover:text-zinc-850 dark:hover:text-white'
+            }`}
+          >
+            <Calculator className="w-4.5 h-4.5" />
+            <span>Cálculos de Chapas</span>
+          </button>
+
+          <button 
+            onClick={() => { setSelectedCalc(null); setViewportTab('emp'); }}
+            className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs tracking-medium transition cursor-pointer ${
+              viewportTab === 'emp' 
+                ? 'bg-amber-400 text-slate-955 shadow-md font-black' 
+                : 'text-zinc-500 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-855 hover:text-zinc-850 dark:hover:text-white'
+            }`}
+          >
+            <Building2 className="w-4.5 h-4.5" />
+            <span>Minha Empresa</span>
+          </button>
+
+          <button 
+            onClick={() => setViewportTab('notif')}
+            className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl font-bold text-xs tracking-medium transition cursor-pointer ${
+              viewportTab === 'notif' 
+                ? 'bg-amber-400 text-slate-955 shadow-md font-black' 
+                : 'text-zinc-500 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-855 hover:text-zinc-850 dark:hover:text-white'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <Bell className="w-4.5 h-4.5" />
+              <span>Notificações</span>
+            </div>
+            {unreadCount > 0 && (
+              <span className="bg-red-500 text-white font-black text-[9px] px-1.5 py-0.5 rounded-full leading-none animate-pulse">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+        </nav>
+
+        <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 space-y-3">
+          <div className="flex items-center gap-1.5 text-[10px] text-emerald-500 font-mono font-bold select-none">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>LICENÇA PREMIUM ATIVADA</span>
+          </div>
+          <button 
+            onClick={handleSignOut}
+            className="w-full flex items-center justify-center gap-2 py-2.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-750 text-zinc-750 dark:text-zinc-300 rounded-xl font-bold text-xs outline-none transition cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Sair do Dashboard</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* 2. CORE APPS WRAPPER VIEW (Beautiful full-page workspace) */}
+      <div className="flex-grow flex flex-col min-h-screen relative overflow-x-hidden">
+        
+        {/* MOBILE INSTANT HEADER (md:hidden, sticky top-0) */}
+        {viewportTab !== 'notif' && (
+          <header className={`md:hidden px-4 py-3 flex justify-between items-center sticky top-0 z-30 border-b shrink-0 ${
+            darkMode ? 'bg-zinc-950/95 border-zinc-900' : 'bg-white/95 border-zinc-150 shadow-xs'
+          } backdrop-blur-md`}>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center font-black font-condensed tracking-tighter text-sm">
+                CZ
               </div>
-
-              <form onSubmit={handleAuthSubmit} className="w-full space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-zinc-500 uppercase block">E-mail Corporativo</label>
-                  <div className="relative">
-                    <input
-                      type="email"
-                      value={authEmail}
-                      onChange={(e) => setAuthEmail(e.target.value)}
-                      placeholder="Ex: thiago@calhazap.com"
-                      className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl pl-9 pr-3 py-3 text-xs font-semibold outline-none text-[#1a1a1a] dark:text-white"
-                      required
-                    />
-                    <Mail className="w-4 h-4 text-zinc-400 absolute left-3 top-3.5 shrink-0" />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-zinc-500 uppercase block">Senha de Segurança</label>
-                  <div className="relative">
-                    <input
-                      type="password"
-                      value={authPassword}
-                      onChange={(e) => setAuthPassword(e.target.value)}
-                      placeholder="Sua senha numérica"
-                      className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-xl pl-9 pr-3 py-3 text-xs font-semibold outline-none text-[#1a1a1a] dark:text-white"
-                      required
-                    />
-                    <Lock className="w-4 h-4 text-zinc-400 absolute left-3 top-3.5 shrink-0" />
-                  </div>
-                </div>
-
-                {authError && (
-                  <div className="p-3 bg-red-100 dark:bg-red-950/40 border border-red-250 text-red-700 dark:text-red-300 text-xs font-semibold rounded-xl leading-normal text-center">
-                    ⚠️ {authError}
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={isAuthSubmitting}
-                  className="w-full py-3.5 bg-amber-400 hover:bg-amber-500 active:scale-95 text-slate-900 rounded-xl font-bold text-xs transition uppercase tracking-wider shadow cursor-pointer disabled:opacity-50"
-                >
-                  {isAuthSubmitting ? "Carregando..." : "Entrar na Oficina Segura ✅"}
-                </button>
-              </form>
-
-              <div className="mt-8 pt-4 border-t border-zinc-200 dark:border-zinc-900 text-[10px] text-center text-zinc-500 font-semibold px-2">
-                Acesso limitado a colaboradores e serralherias autorizadas CalhaZap.
+              <div>
+                <span className="text-[9px] text-zinc-500 block font-bold uppercase leading-none">Boa tarde</span>
+                <span className="font-bold text-xs block leading-tight text-amber-500 truncate max-w-[150px]">
+                  {companyName || 'Minha Oficina'}
+                </span>
               </div>
             </div>
-          ) : (
+
+            <div className="flex items-center gap-1.5">
+              <button 
+                onClick={toggleDarkMode}
+                className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                  darkMode ? 'bg-zinc-900 text-amber-400' : 'bg-stone-100 text-zinc-650'
+                }`}
+              >
+                {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+
+              <button 
+                onClick={() => setViewportTab('notif')}
+                className={`p-2 rounded-lg transition-colors relative cursor-pointer ${
+                  darkMode ? 'bg-zinc-900 text-zinc-300' : 'bg-stone-100 text-zinc-650'
+                }`}
+              >
+                <Bell className="w-4.5 h-4.5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500"></span>
+                )}
+              </button>
+            </div>
+          </header>
+        )}
+
+        {/* CORE WORKSPACE PANEL */}
+        <main className="flex-grow p-4 md:p-8 flex flex-col w-full max-w-6xl mx-auto pb-24 md:pb-8">
+          
+          {/* VIEWPORT CONTROLLER SWITCHBOARD */}
+          <div className="space-y-4 md:space-y-6 flex-grow">
             
-            // USER AUTHENTICATED: CORE APPLICATION WORKSPACE PANELS
-            <div className="flex flex-col h-full">
-
-              {/* Viewport Top App Bar Header Menu */}
-              {viewportTab !== 'notif' && (
-                <div className={`px-4 py-3.5 flex justify-between items-center shrink-0 border-b ${
-                  darkMode ? 'border-zinc-900 bg-zinc-950/80' : 'border-zinc-200 bg-white/80'
-                } backdrop-blur-sm sticky top-0 z-20`}>
-                  
-                  <div className="flex items-center gap-2.5">
-                    {/* Head Initials Circle Badge */}
-                    <div className="w-10 h-10 rounded-full bg-amber-500 border border-amber-600/20 text-slate-950 flex items-center justify-center font-black font-condensed tracking-tighter text-sm shadow-sm select-none">
-                      CS
-                    </div>
-                    <div>
-                      <h2 className="text-xs font-semibold text-zinc-400 leading-none">Boa tarde, Carlos!</h2>
-                      <span className="font-bold text-sm tracking-tight leading-normal block text-amber-500 truncate max-w-[150px]">
-                        {companyName}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {/* Theme Mode Toggle Button */}
-                    <button 
-                      onClick={toggleDarkMode}
-                      className={`p-2 rounded-lg transition-colors cursor-pointer ${
-                        darkMode ? 'bg-zinc-900 text-amber-400 hover:bg-zinc-850' : 'bg-stone-100 text-zinc-600 hover:bg-stone-200'
-                      }`}
-                    >
-                      {darkMode ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
-                    </button>
-
-                    {/* Alarm Bells Notification Button */}
-                    <button 
-                      onClick={() => setViewportTab('notif')}
-                      className={`p-2 rounded-lg transition-colors relative cursor-pointer ${
-                        darkMode ? 'bg-zinc-900 text-zinc-300 hover:bg-zinc-850' : 'bg-stone-100 text-zinc-600 hover:bg-stone-200'
-                      }`}
-                    >
-                      <Bell className="w-4.5 h-4.5" />
-                      {unreadCount > 0 && (
-                        <span className="absolute top-1 right-1.5 w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* VIEWPORT CONTROLLER SWITCHBOARD */}
-              <div className="flex-grow p-4 pb-20">
-
-                {/* TAB 1: Dashboard Home Tab */}
-                {viewportTab === 'home' && (
+            {/* TAB 1: Dashboard Home Tab */}
+            {viewportTab === 'home' && (
+              <div className="space-y-4 animate-fade-in">(
                   <div className="space-y-4 animate-fade-in">
                     
                     {/* Top Calendary Greeting metadata */}
@@ -1053,17 +1173,27 @@ export default function App() {
                             </div>
                           </div>
 
-                          {/* Foto da Obra Dash upload box (Matches screenshot 5) */}
+                          {/* Foto da Obra Capture and upload block (functional) */}
                           <div className="space-y-1">
                             <label className="text-xs font-bold text-zinc-400">Foto da Obra (Opcional)</label>
+                            
+                            <input 
+                              type="file"
+                              ref={photoInputRef}
+                              accept="image/*"
+                              capture="environment"
+                              onChange={handlePhotoChange}
+                              className="hidden"
+                            />
+
                             <div 
-                              onClick={triggerMockUpload}
+                              onClick={triggerCameraInput}
                               className="cursor-pointer border-2 border-dashed border-zinc-300 dark:border-zinc-800 rounded-2xl p-5 hover:bg-zinc-50 dark:hover:bg-zinc-900 flex flex-col items-center justify-center gap-2 text-center text-[11px] font-bold text-zinc-500"
                             >
-                              <Camera className="w-6 h-6 text-zinc-450 stroke-[2] animate-bounce" />
+                              <Camera className="w-6 h-6 text-amber-500 stroke-[2] animate-pulse" />
                               <div>
-                                <span className="text-zinc-650 dark:text-zinc-300">Foto da Obra</span>
-                                <p className="text-[10px] text-zinc-500 font-normal mt-0.5">Clique para simular câmera do iPhone</p>
+                                <span className="text-zinc-650 dark:text-zinc-300">Tirar Foto ou Escolher Imagem</span>
+                                <p className="text-[10px] text-zinc-500 font-normal mt-0.5">Captura real usando sua câmera ou galeria do aparelho</p>
                               </div>
                             </div>
                             
@@ -1071,10 +1201,22 @@ export default function App() {
                               <div className="relative rounded-2xl border bg-white border-zinc-300 text-zinc-800 p-2 text-xs flex gap-3.5 items-center">
                                 <img src={wPhoto} className="w-12 h-12 object-cover rounded-lg" alt="Obra" />
                                 <div className="flex-grow">
-                                  <span className="font-bold block">obra_01.jpeg</span>
-                                  <span className="text-[10px] text-zinc-500">240 KB • Sucedido</span>
+                                  <span className="font-bold block truncate max-w-[180px]">
+                                    {photoInfo?.name || 'foto_obra.jpg'}
+                                  </span>
+                                  <span className="text-[10px] text-zinc-500">
+                                    {photoInfo?.size || 'Sucesso'} • Carregada
+                                  </span>
                                 </div>
-                                <button onClick={() => setWPhoto(null)} className="p-1 hover:bg-zinc-150 text-red-500 rounded"><X className="w-4 h-4" /></button>
+                                <button 
+                                  onClick={() => {
+                                    setWPhoto(null);
+                                    setPhotoInfo(null);
+                                  }} 
+                                  className="p-1 hover:bg-zinc-150 text-red-500 rounded cursor-pointer"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
                               </div>
                             )}
                           </div>
