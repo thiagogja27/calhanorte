@@ -1,0 +1,6 @@
+{
+  "name": "Calha Norte",
+  "description": "Calculadora de peso de aço, catálogo de produtos em metalurgia (Gerdau, CSN) e gerador de orçamentos profissionais em PDF / WhatsApp integrados com assistente de IA Gemini.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
