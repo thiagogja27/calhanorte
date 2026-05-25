@@ -626,10 +626,10 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen bg-slate-950 flex flex-col items-center justify-center p-0 md:p-6 transition-colors duration-300 font-sans ${darkMode ? 'dark text-zinc-100' : 'text-zinc-900'}`}>
+    <div className={`min-h-screen flex flex-col items-center justify-center p-0 md:p-6 transition-colors duration-300 font-sans ${darkMode ? 'dark bg-zinc-950 text-zinc-100' : 'bg-stone-100 text-zinc-900'}`}>
       
-      {/* Absolute Header for Desktop View only */}
-      <div className="hidden md:flex items-center gap-6 justify-between w-full max-w-4xl px-4 py-3 border-b border-zinc-800/60 mb-6 font-mono text-xs text-zinc-500 shrink-0">
+      {/* Absolute Header for Desktop/Tablet View */}
+      <div className="hidden md:flex items-center gap-6 justify-between w-full max-w-4xl lg:max-w-5xl xl:max-w-6xl px-4 py-3 border-b border-zinc-200 dark:border-zinc-850 mb-6 font-mono text-xs text-zinc-500 shrink-0">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
           <span>CalhaZap Cloud: Conectado</span>
@@ -652,28 +652,10 @@ export default function App() {
         </div>
       </div>
 
-      {/* Interactive Smartphone Chassis Mockup Wrapper */}
-      <div className="w-full md:max-w-[420px] md:h-[860px] bg-zinc-100 dark:bg-black md:rounded-[44px] md:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.95)] border-0 md:border-[10px] md:border-zinc-800 relative flex flex-col overflow-hidden transition-all duration-300">
+      {/* Responsive Workspace App Panel Container */}
+      <div className="w-full md:max-w-4xl lg:max-w-5xl xl:max-w-6xl h-screen md:h-[85vh] bg-white dark:bg-zinc-950 md:rounded-[24px] md:shadow-2xl md:border border-zinc-200 dark:border-zinc-850 relative flex flex-col overflow-hidden transition-all duration-300">
         
-        {/* iPhone Native Header: Battery, Signal, Dynamic Island */}
-        <div className="bg-zinc-100 dark:bg-black text-black dark:text-white px-5 pt-3 pb-2 flex justify-between items-center text-[11px] font-bold z-30 shrink-0 select-none border-b border-zinc-200/50 dark:border-zinc-900/60 font-mono">
-          <span>14:20</span>
-          
-          {/* Dynamic Island Notch */}
-          <div className="w-24 h-4.5 bg-black rounded-full absolute left-1/2 -translate-x-1/2 top-2.5 flex items-center justify-end pr-3 border border-zinc-900 shadow-inner">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-900 animate-ping"></span>
-          </div>
-          
-          <div className="flex items-center gap-1.5">
-            <Wrench className="w-3 h-3 text-zinc-400 shrink-0" />
-            <span className="text-zinc-400 font-normal">84%</span>
-            <div className="w-5 h-2.5 rounded-sm bg-zinc-300 dark:bg-zinc-800 border border-zinc-400 dark:border-zinc-700 p-0.5 flex">
-              <div className="h-full w-[84%] bg-green-500 rounded-2xs"></div>
-            </div>
-          </div>
-        </div>
-
-        {/* Dynamic App Area inside Smartphone Viewport */}
+        {/* Dynamic App Area inside Viewport */}
         <div className={`flex-grow flex flex-col overflow-y-auto no-scrollbar relative transition-colors duration-300 ${
           darkMode ? 'bg-zinc-950 text-white' : 'bg-stone-50 text-stone-900'
         }`}>
@@ -2073,9 +2055,6 @@ export default function App() {
                   <Building2 className="w-5 h-5 stroke-[2.2]" />
                   <span className="text-[9px] font-bold tracking-wide">Empresa</span>
                 </button>
-
-                {/* iPhone swipe bottom pill indicator */}
-                <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-32 h-1 bg-zinc-300 dark:bg-zinc-800 rounded-full select-none" />
               </div>
 
             </div>
