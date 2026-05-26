@@ -336,12 +336,18 @@ export default function App() {
         const defaultRole = (user.email === 'thiago.viaembratelgja@gmail.com' || user.email?.toLowerCase().includes('admin')) ? 'admin' : 'cliente';
         set(companyRoleRef, defaultRole).then(() => {
           setUserRole(defaultRole);
+        }).catch((err) => {
+          console.error("Erro ao gravar role do usuário:", err);
         });
         
         // Also save user metadata inside companies table so they can recognize who the uid belongs to in their console
         const companyEmailRef = ref(db, `companies/${user.uid}/email`);
-        set(companyEmailRef, user.email || '');
+        set(companyEmailRef, user.email || '').catch((err) => {
+          console.error("Erro ao gravar email do usuário:", err);
+        });
       }
+    }, (err) => {
+      console.error("Erro de permissão no Firebase Realtime Database. Por favor atualize as regras de segurança.", err);
     });
 
     return () => {
