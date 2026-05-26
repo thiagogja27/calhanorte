@@ -6,7 +6,7 @@ import {
   Building, Sparkles, Mail, Lock, LogOut, Loader2, CheckCircle2,
   Bell, Moon, Sun, ChevronRight, Plus, ArrowLeft, Wrench, Users,
   Phone, MapPin, Camera, Check, Menu, Trash2, Edit3, Printer,
-  Clock, Info, X, ChevronDown, Calendar, DollarSign, AlertCircle,
+  Clock, Info, X, ChevronDown, Calendar, DollarSign, AlertCircle, Search,
   MessageSquareCode, HelpCircle, FileText, Send, SquareTerminal, Scale
 } from 'lucide-react';
 
@@ -68,8 +68,15 @@ export default function App() {
   };
 
   // Active workspace settings (mapped to iPhone Viewport Tabs)
-  // 'home' = Dashboard, 'orc' = 5-Step Wizard, 'hist' = Saved List, 'calc' = 2x2 calculators grid, 'emp' = settings/plans/AI
-  const [viewportTab, setViewportTab] = useState<'home' | 'orc' | 'hist' | 'calc' | 'emp' | 'notif'>('home');
+  // 'home' = Dashboard, 'orc' = 5-Step Wizard, 'hist' = Saved List, 'calc' = 2x2 calculators grid, 'emp' = settings/plans/AI, 'admin' = Admin Panel
+  const [viewportTab, setViewportTab] = useState<'home' | 'orc' | 'hist' | 'calc' | 'emp' | 'notif' | 'admin'>('home');
+
+  // Multi-Company Admin States
+  const [allCompanies, setAllCompanies] = useState<any[]>([]);
+  const [allQuotes, setAllQuotes] = useState<any[]>([]);
+  const [allClients, setAllClients] = useState<any[]>([]);
+  const [selectedAdminCompanyFilter, setSelectedAdminCompanyFilter] = useState<string>('all');
+  const [adminSearchQuery, setAdminSearchQuery] = useState<string>('');
 
   // Selected Active Calculator
   const [selectedCalc, setSelectedCalc] = useState<null | 'metragem' | 'metro-kg' | 'corte' | 'incline'>(null);
@@ -95,6 +102,10 @@ export default function App() {
   const [showLock, setShowLock] = useState(false);
   const [lockTitle, setLockTitle] = useState('');
   const [lockSub, setLockSub] = useState('');
+
+  // WhatsApp PDF Helper States
+  const [showWhatsAppPdfHelper, setShowWhatsAppPdfHelper] = useState(false);
+  const [selectedQuoteForPdf, setSelectedQuoteForPdf] = useState<any | null>(null);
 
   // -------------------------------------------------------------
   // CUSTOM 5-STEP WIZARD SELECTIONS STATE (for "Novo Orçamento")
@@ -201,6 +212,7 @@ export default function App() {
   const [notifs, setNotifs] = useState<{ id: string; type: string; title: string; desc: string; time: string; read: boolean; }[]>([]);
 
   const unreadCount = notifs.filter(n => !n.read).length;
+  const isAdmin = !!(user && (user.email === 'thiago.viaembratelgja@gmail.com' || user.email?.toLowerCase().includes('admin')));
 
   const markAllNotifsRead = () => {
     setNotifs(prev => prev.map(n => ({ ...n, read: true })));
@@ -351,6 +363,58 @@ export default function App() {
       setClients(arr);
     });
 
+    // Multi-Company Real-time Admin Sync Flow
+    const isUserAdmin = user && (user.email === 'thiago.viaembratelgja@gmail.com' || user.email?.toLowerCase().includes('admin'));
+    let unsubAllCompanies = () => {};
+    let unsubAllQuotes = () => {};
+
+    if (isUserAdmin) {
+      const companiesRef = ref(db, 'companies');
+      unsubAllCompanies = onValue(companiesRef, (snapshot) => {
+        const arr: any[] = [];
+        if (snapshot.exists()) {
+          snapshot.forEach((child) => {
+            arr.push({
+              uid: child.key,
+              ...child.val()
+            });
+          });
+        }
+        setAllCompanies(arr);
+      });
+
+      const rootQuotesRef = ref(db, 'quotes');
+      unsubAllQuotes = onValue(rootQuotesRef, (snapshot) => {
+        const quotesArr: any[] = [];
+        const clientsArr: any[] = [];
+        if (snapshot.exists()) {
+          snapshot.forEach((userNode) => {
+            const userUid = userNode.key;
+            userNode.forEach((childNode) => {
+              if (childNode.key === '_clients') {
+                childNode.forEach((clientNode) => {
+                  clientsArr.push({
+                    id: clientNode.key,
+                    ...clientNode.val(),
+                    companyUid: userUid
+                  });
+                });
+              } else {
+                quotesArr.push({
+                  ...childNode.val(),
+                  companyUid: userUid
+                });
+              }
+            });
+          });
+        }
+        setAllQuotes(quotesArr.reverse());
+        setAllClients(clientsArr);
+      });
+
+      setViewportTab('admin');
+    }
+
     try {
       const ok = localStorage.getItem('cz_ativo') === '1';
       setCzAtivo(ok);
@@ -360,6 +424,8 @@ export default function App() {
       unsubCompany();
       unsubQuotes();
       unsubClients();
+      unsubAllCompanies();
+      unsubAllQuotes();
     };
   }, [user]);
 
@@ -921,7 +987,7 @@ export default function App() {
 
     alert(`🎉 Sucesso! Orçamento cadastrado na nuvem com o código ${payload.id}`);
     
-    // Auto redirect to history list to view or print
+    // Auto redirect to history list and open WhatsApp PDF Helper immediately
     setWName('');
     setWPhone('');
     setWAddress('');
@@ -930,6 +996,9 @@ export default function App() {
     setWRufoItems([]);
     setWChamQty(1);
     setWCoifaQty(0);
+    
+    setSelectedQuoteForPdf(payload);
+    setShowWhatsAppPdfHelper(true);
     setViewportTab('hist');
   };
 
@@ -1089,6 +1158,19 @@ export default function App() {
                       {unreadCount > 0 && (
                         <span className="absolute top-1 right-1.5 w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
                       )}
+                    </button>
+
+                    {/* Mobile LogOut Button */}
+                    <button 
+                      onClick={handleSignOut}
+                      className={`p-2 rounded-lg transition-colors cursor-pointer border ${
+                        darkMode 
+                          ? 'bg-zinc-900 text-red-400 hover:text-red-300 hover:bg-red-950/20 border-zinc-800' 
+                          : 'bg-stone-100 text-red-600 hover:text-red-700 hover:bg-red-50 border-stone-200'
+                      }`}
+                      title="Sair / Desconectar"
+                    >
+                      <LogOut className="w-4.5 h-4.5" />
                     </button>
                   </div>
                 </div>
@@ -2570,6 +2652,10 @@ export default function App() {
                         onDeleteQuote={handleDeleteQuoteId}
                         onEditLoad={handleEditLoad}
                         onPrintQuote={handleDirectPrintReprnt}
+                        onSendPdfViaWhatsApp={(q) => {
+                          setSelectedQuoteForPdf(q);
+                          setShowWhatsAppPdfHelper(true);
+                        }}
                         companyName={companyName}
                       />
                     </div>
@@ -3027,6 +3113,415 @@ export default function App() {
                   </div>
                 )}
 
+                {/* TAB 7: ADMIN CONTROL CENTER (Exclusive to Administrators) */}
+                {viewportTab === 'admin' && isAdmin && (
+                  <div className="space-y-6 animate-fade-in pb-20 select-none">
+                    
+                    {/* Admin Header Banner */}
+                    <div className="p-5 rounded-3xl bg-zinc-900 text-white border border-zinc-800 space-y-3 relative overflow-hidden shadow-lg">
+                      <div className="absolute right-[-20px] bottom-[-20px] text-zinc-800 opacity-20 text-8xl font-black">
+                        ADM
+                      </div>
+                      <div className="flex justify-between items-center relative z-10">
+                        <div className="flex items-center gap-2">
+                          <span className="p-0.5 px-2 bg-red-600 text-white text-[8px] font-black rounded uppercase tracking-wider animate-pulse">
+                            🛡️ ADMINISTRADOR
+                          </span>
+                          <span className="text-zinc-500 font-mono text-[10px]">| Geral Consolidado</span>
+                        </div>
+                        <button 
+                          onClick={() => setViewportTab('home')}
+                          className="flex items-center gap-1.5 px-3 py-1 bg-zinc-800 text-amber-400 hover:text-amber-300 font-bold rounded-xl text-xs transition cursor-pointer border border-zinc-700"
+                        >
+                          <ArrowLeft className="w-3.5 h-3.5" />
+                          <span>Voltar para Oficina</span>
+                        </button>
+                      </div>
+                      
+                      <div className="space-y-1 relative z-10">
+                        <h3 className="text-lg font-extrabold tracking-tight uppercase text-zinc-100">
+                          Consolidação de Propostas & Empresas
+                        </h3>
+                        <p className="text-[11px] text-zinc-400 font-semibold leading-relaxed max-w-xl">
+                          Análise unificada e inteligência preditiva abrangendo todas as empresas afiliadas, seus orçamentos totais e histórico acumulado de clientes no CalhaZap.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* KEY AGGREGATED STATISTICS GRID */}
+                    {(() => {
+                      const totalComps = allCompanies.length;
+                      const totalQCount = allQuotes.length;
+                      const approvedQuotes = allQuotes.filter(q => q.status === 'aprovado');
+                      const pendingQuotes = allQuotes.filter(q => q.status === 'pendente' || !q.status);
+                      const rejectedQuotes = allQuotes.filter(q => q.status === 'cancelado' || q.status === 'rejeitado');
+                      
+                      const totalRevenue = approvedQuotes.reduce((acc, q) => acc + Number(q.total || q.valorTotal || q.subtotal || 0), 0);
+                      const conversionRate = totalQCount > 0 ? ((approvedQuotes.length / totalQCount) * 100).toFixed(1) : '0';
+
+                      return (
+                        <div className="space-y-6">
+                          
+                          {/* Top Metric Cards BENTO Grid */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            
+                            {/* Card 1: Empresas Ativas */}
+                            <div className={`p-4 rounded-3xl border flex flex-col justify-between h-[105px] shadow-xs relative overflow-hidden transition ${
+                              darkMode ? 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-700' : 'bg-white border-zinc-150 hover:border-zinc-200'
+                            }`}>
+                              <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest leading-none">Empresas Unidas</span>
+                              <div className="space-y-0.5">
+                                <h3 className="text-xl font-black tracking-tight leading-none text-amber-500 font-mono">
+                                  {totalComps}
+                                </h3>
+                                <span className="text-[9px] text-zinc-500 block leading-none font-bold">Oficinas no CalhaZap</span>
+                              </div>
+                              <span className="absolute right-3.5 bottom-3 text-2xl opacity-15 select-none">🏢</span>
+                            </div>
+
+                            {/* Card 2: Total Orçamentos */}
+                            <div className={`p-4 rounded-3xl border flex flex-col justify-between h-[105px] shadow-xs relative overflow-hidden transition ${
+                              darkMode ? 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-700' : 'bg-white border-zinc-150 hover:border-zinc-200'
+                            }`}>
+                              <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest leading-none">Orçamentos</span>
+                              <div className="space-y-0.5">
+                                <h3 className="text-xl font-black tracking-tight leading-none text-blue-500 font-mono">
+                                  {totalQCount}
+                                </h3>
+                                <span className="text-[9px] text-zinc-500 block leading-none font-bold">Total de propostas gerais</span>
+                              </div>
+                              <span className="absolute right-3.5 bottom-3 text-2xl opacity-15 select-none">📋</span>
+                            </div>
+
+                            {/* Card 3: Faturamento Consolidado */}
+                            <div className={`p-4 rounded-3xl border flex flex-col justify-between h-[105px] shadow-xs relative overflow-hidden transition ${
+                              darkMode ? 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-700' : 'bg-white border-zinc-150 hover:border-zinc-200'
+                            }`}>
+                              <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest leading-none">Vendas (R$)</span>
+                              <div className="space-y-0.5">
+                                <h3 className="text-lg font-black tracking-tight leading-none text-emerald-500 font-mono truncate">
+                                  {totalRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}
+                                </h3>
+                                <span className="text-[9px] text-zinc-500 block leading-none font-bold">Geral aprovado</span>
+                              </div>
+                              <span className="absolute right-3.5 bottom-3 text-2xl opacity-15 select-none">💵</span>
+                            </div>
+
+                            {/* Card 4: Conversão de Vendas */}
+                            <div className={`p-4 rounded-3xl border flex flex-col justify-between h-[105px] shadow-xs relative overflow-hidden transition ${
+                              darkMode ? 'bg-zinc-900/50 border-zinc-800 hover:border-zinc-700' : 'bg-white border-zinc-150 hover:border-zinc-200'
+                            }`}>
+                              <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest leading-none">Taxa Conversão</span>
+                              <div className="space-y-0.5">
+                                <h3 className="text-xl font-black tracking-tight leading-none text-red-500 font-mono">
+                                  {conversionRate}%
+                                </h3>
+                                <span className="text-[9px] text-zinc-500 block leading-none font-bold">Aprovações / Emitidos</span>
+                              </div>
+                              <span className="absolute right-3.5 bottom-3 text-2xl opacity-15 select-none">🎯</span>
+                            </div>
+
+                          </div>
+
+                          {/* DASHBOARDS SECTOR - TWO COLUMNS */}
+                          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                            
+                            {/* LEFT SIDE: TOP PERFORMING COMPANIES */}
+                            <div className={`lg:col-span-7 p-5 rounded-3xl border space-y-4 shadow-xs ${
+                              darkMode ? 'bg-zinc-900/40 border-zinc-850' : 'bg-white border-zinc-150'
+                            }`}>
+                              <div className="flex justify-between items-center border-b pb-3 dark:border-zinc-850">
+                                <div>
+                                  <h4 className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5 leading-none">
+                                    🏆 Faturamento por Oficina cadastrada
+                                  </h4>
+                                  <span className="text-[10px] text-zinc-500 font-semibold">Consolidado em R$ comercializado</span>
+                                </div>
+                              </div>
+
+                              <div className="space-y-4">
+                                {totalComps === 0 ? (
+                                  <div className="text-center py-6 text-xs text-zinc-400 font-bold">Nenhuma oficina no sistema.</div>
+                                ) : (
+                                  allCompanies
+                                    .map(comp => {
+                                      const compQuotes = allQuotes.filter(q => q.companyUid === comp.uid);
+                                      const compApproved = compQuotes.filter(q => q.status === 'aprovado');
+                                      const compRevenue = compApproved.reduce((sum, q) => sum + Number(q.total || q.valorTotal || q.subtotal || 0), 0);
+                                      return {
+                                        ...comp,
+                                        quotesCount: compQuotes.length,
+                                        revenue: compRevenue
+                                      };
+                                    })
+                                    .sort((a,b) => b.revenue - a.revenue)
+                                    .map((comp, idx) => {
+                                      const maxRev = Math.max(...allCompanies.map(c => {
+                                        const cpQ = allQuotes.filter(q => q.companyUid === c.uid);
+                                        return cpQ.filter(q => q.status === 'aprovado').reduce((s, q) => s + Number(q.total || q.valorTotal || q.subtotal || 0), 0);
+                                      })) || 1;
+                                      const barPct = Math.round((comp.revenue / maxRev) * 105);
+
+                                      return (
+                                        <div key={comp.uid} className="space-y-1">
+                                          <div className="flex justify-between items-center text-xs">
+                                            <div className="flex items-center gap-2 font-black">
+                                              <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] ${
+                                                idx === 0 ? 'bg-amber-400 text-black' : (idx === 1 ? 'bg-stone-300 text-black' : 'bg-stone-100 dark:bg-zinc-800 text-zinc-500')
+                                              }`}>
+                                                {idx + 1}
+                                              </span>
+                                              <span className="text-zinc-800 dark:text-zinc-100 max-w-[170px] truncate">{comp.name || "Sem Nome Especificado"}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 font-mono text-[11px] font-black">
+                                              <span className="text-zinc-400 text-[9px]">({comp.quotesCount} orç.)</span>
+                                              <span className="text-emerald-500">{comp.revenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })}</span>
+                                            </div>
+                                          </div>
+                                          <div className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-850 rounded-full overflow-hidden">
+                                            <div 
+                                              className="h-full bg-gradient-to-r from-amber-400 to-emerald-500 rounded-full"
+                                              style={{ width: `${Math.max(4, Math.min(100, barPct))}%` }}
+                                            />
+                                          </div>
+                                        </div>
+                                      );
+                                    })
+                                )}
+                              </div>
+                            </div>
+
+                            {/* RIGHT SIDE: STATUS FUNNEL */}
+                            <div className={`lg:col-span-5 p-5 rounded-3xl border space-y-4 shadow-xs flex flex-col justify-between ${
+                              darkMode ? 'bg-zinc-900/40 border-zinc-850' : 'bg-white border-zinc-150'
+                            }`}>
+                              <div>
+                                <h4 className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5 leading-none">
+                                  📊 Funil de Orçamentos Geral
+                                </h4>
+                                <span className="text-[10px] text-zinc-500 font-semibold block">Conversão de propostas emitidas</span>
+                              </div>
+
+                              {totalQCount === 0 ? (
+                                <div className="text-center py-6 text-xs text-zinc-400 font-bold flex-1 flex items-center justify-center">Sem dados suficientes.</div>
+                              ) : (
+                                <div className="space-y-4">
+                                  
+                                  {(() => {
+                                    const appCount = approvedQuotes.length;
+                                    const pendCount = pendingQuotes.length;
+                                    const rejCount = rejectedQuotes.length;
+                                    
+                                    const appPct = Math.round((appCount / totalQCount) * 100);
+                                    const pendPct = Math.round((pendCount / totalQCount) * 100);
+                                    const rejPct = Math.round((rejCount / totalQCount) * 100);
+
+                                    const radius = 35;
+                                    const circum = 2 * Math.PI * radius;
+                                    
+                                    const strokeApp = (appCount / totalQCount) * circum;
+                                    const strokePend = (pendCount / totalQCount) * circum;
+                                    const strokeRej = (rejCount / totalQCount) * circum;
+
+                                    return (
+                                      <div className="flex items-center gap-4 py-1">
+                                        <div className="relative w-24 h-24 shrink-0 flex items-center justify-center">
+                                          <svg width="80" height="80" className="transform -rotate-90">
+                                            <circle cx="40" cy="40" r={radius} fill="transparent" stroke={darkMode ? "#18181b" : "#f4f4f5"} strokeWidth="10" />
+                                            <circle cx="40" cy="40" r={radius} fill="transparent" stroke="#10b981" strokeWidth="10" strokeDasharray={`${strokeApp} ${circum}`} strokeDashoffset="0" />
+                                            <circle cx="40" cy="40" r={radius} fill="transparent" stroke="#f59e0b" strokeWidth="10" strokeDasharray={`${strokePend} ${circum}`} strokeDashoffset={`-${strokeApp}`} />
+                                            <circle cx="40" cy="40" r={radius} fill="transparent" stroke="#ef4444" strokeWidth="10" strokeDasharray={`${strokeRej} ${circum}`} strokeDashoffset={`-${strokeApp + strokePend}`} />
+                                          </svg>
+                                          <div className="absolute text-center">
+                                            <span className="text-sm font-black tracking-tight">{totalQCount}</span>
+                                            <span className="text-[7px] text-zinc-400 block font-bold uppercase leading-none">Total</span>
+                                          </div>
+                                        </div>
+
+                                        <div className="flex-grow space-y-1.5 text-xs">
+                                          <div className="flex items-center gap-2 justify-between">
+                                            <span className="flex items-center gap-1.5 text-zinc-500 font-bold text-[11px]">
+                                              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                                              <span>Aprovados</span>
+                                            </span>
+                                            <span className="font-mono font-black">{appCount} <em className="text-zinc-500 font-normal text-[10px] NOT-italic">({appPct}%)</em></span>
+                                          </div>
+                                          <div className="flex items-center gap-2 justify-between">
+                                            <span className="flex items-center gap-1.5 text-zinc-500 font-bold text-[11px]">
+                                              <span className="w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
+                                              <span>Pendentes</span>
+                                            </span>
+                                            <span className="font-mono font-black">{pendCount} <em className="text-zinc-550 font-normal text-[10px] NOT-italic">({pendPct}%)</em></span>
+                                          </div>
+                                          <div className="flex items-center gap-2 justify-between">
+                                            <span className="flex items-center gap-1.5 text-zinc-500 font-bold text-[11px]">
+                                              <span className="w-1.5 h-1.5 bg-red-500 rounded-full"></span>
+                                              <span>Cancelados</span>
+                                            </span>
+                                            <span className="font-mono font-black">{rejCount} <em className="text-zinc-550 font-normal text-[10px] NOT-italic">({rejPct}%)</em></span>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })()}
+                                  
+                                  <div className="border-t pt-2.5 dark:border-zinc-800 space-y-1 text-[10px] text-zinc-400">
+                                    <span className="font-bold uppercase tracking-wider block">Eficiência de Fechamento</span>
+                                    <p className="leading-snug">
+                                      {Number(conversionRate) > 50 
+                                        ? "🔥 Conversão acima de 50%. Parabéns! Estratégias comerciais de conversão do CalhaZap funcionando."
+                                        : "🛠️ Conversão abaixo de 50%. Sugestão: Incentivar lembretes e followups automáticos pós-orçamento."
+                                      }
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                          </div>
+
+                          {/* INTERACTIVE COMPREHENSIVE RECORDS LIST */}
+                          <div className={`p-5 rounded-3xl border space-y-4 shadow-sm ${
+                            darkMode ? 'bg-zinc-900/40 border-zinc-850' : 'bg-white border-zinc-150'
+                          }`}>
+                            
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b dark:border-zinc-850 pb-3">
+                              <div className="space-y-0.5">
+                                <h4 className="text-xs font-black uppercase tracking-wider flex items-center gap-1.5 leading-none">
+                                  🔎 Lista Detalhada dos Orçamentos de Todas as Oficinas
+                                </h4>
+                                <span className="text-[10px] text-zinc-500 font-semibold block">Explorador unificado em tempo real</span>
+                              </div>
+                              
+                              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                                <div className="relative shadow-xs rounded-xl flex-grow sm:flex-none">
+                                  <input 
+                                    type="text"
+                                    value={adminSearchQuery}
+                                    onChange={(e) => setAdminSearchQuery(e.target.value)}
+                                    placeholder="Buscar por cliente ou empresa..."
+                                    className={`w-full sm:w-56 pl-8 pr-3 py-1.5 text-xs rounded-xl font-semibold border focus:outline-none focus:ring-1 focus:ring-amber-400 ${
+                                      darkMode ? 'bg-zinc-950 border-zinc-800 text-white placeholder-zinc-500' : 'bg-zinc-50 border-zinc-200 text-zinc-800'
+                                    }`}
+                                  />
+                                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-zinc-400" />
+                                </div>
+
+                                <select
+                                  value={selectedAdminCompanyFilter}
+                                  onChange={(e) => setSelectedAdminCompanyFilter(e.target.value)}
+                                  className={`text-xs px-2.5 py-1.5 rounded-xl border font-bold bg-white dark:bg-zinc-950 focus:outline-none focus:ring-1 focus:ring-amber-400 ${
+                                    darkMode ? 'border-zinc-800 text-white' : 'border-zinc-200 text-zinc-700'
+                                  }`}
+                                >
+                                  <option value="all">Todas as Empresas</option>
+                                  {allCompanies.map(c => (
+                                    <option key={c.uid} value={c.uid}>{c.name || "Oficina s/ nome"}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-left text-[11px] font-semibold">
+                                <thead>
+                                  <tr className="border-b border-zinc-150 dark:border-zinc-850 text-zinc-400 text-[9px] uppercase font-black tracking-wider text-stone-500 dark:text-zinc-500">
+                                    <th className="py-2">Código / Ref</th>
+                                    <th className="py-2">Oficina Parceira</th>
+                                    <th className="py-2">Cliente</th>
+                                    <th className="py-1 text-right">Preço Final</th>
+                                    <th className="py-2 text-center">Status</th>
+                                    <th className="py-2 text-right pr-2">Ações</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-850 text-zinc-800 dark:text-zinc-200">
+                                  {(() => {
+                                    const filtered = allQuotes.filter(q => {
+                                      const matchesCompany = selectedAdminCompanyFilter === 'all' || q.companyUid === selectedAdminCompanyFilter;
+                                      const cName = (q.customerName || '').toLowerCase();
+                                      const qId = (q.id || '').toLowerCase();
+                                      const compDetails = allCompanies.find(c => c.uid === q.companyUid);
+                                      const compName = (compDetails?.name || '').toLowerCase();
+
+                                      const matchesSearch = !adminSearchQuery || 
+                                        cName.includes(adminSearchQuery.toLowerCase()) || 
+                                        qId.includes(adminSearchQuery.toLowerCase()) || 
+                                        compName.includes(adminSearchQuery.toLowerCase());
+
+                                      return matchesCompany && matchesSearch;
+                                    });
+
+                                    if (filtered.length === 0) {
+                                      return (
+                                        <tr>
+                                          <td colSpan={6} className="py-8 text-center text-zinc-400 font-bold select-none">
+                                            Nenhuma proposta corresponde aos parâmetros de pesquisa filtrados.
+                                          </td>
+                                        </tr>
+                                      );
+                                    }
+
+                                    return filtered.slice(0, 50).map((q) => {
+                                      const comp = allCompanies.find(c => c.uid === q.companyUid);
+                                      const qTotal = Number(q.total || q.valorTotal || q.subtotal || 0);
+
+                                      return (
+                                        <tr key={q.id} className="hover:bg-stone-50 dark:hover:bg-zinc-900/30 transition-colors">
+                                          <td className="py-3 font-mono font-black text-amber-500">{q.id}</td>
+                                          <td className="py-3 pr-2">
+                                            <div className="leading-tight">
+                                              <span className="block font-black text-zinc-800 dark:text-zinc-200">{comp?.name || "Oficina Conectada"}</span>
+                                              <span className="text-[10px] text-zinc-500 font-semibold block truncate max-w-[130px]">{comp?.phone || "S/ contato"}</span>
+                                            </div>
+                                          </td>
+                                          <td className="py-3">
+                                            <div className="leading-tight text-[11px] font-bold">
+                                              <span className="block font-black text-zinc-850 dark:text-zinc-100">{q.customerName}</span>
+                                              <span className="text-[10px] text-zinc-400 block truncate max-w-[120px]">{q.customerAddress || "S/ endereço"}</span>
+                                            </div>
+                                          </td>
+                                          <td className="py-3 text-right font-mono font-black text-emerald-500">
+                                            {qTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                          </td>
+                                          <td className="py-3 text-center">
+                                            <span className={`inline-block px-1.5 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider ${
+                                              q.status === 'aprovado' 
+                                                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20' 
+                                                : q.status === 'cancelado' || q.status === 'rejeitado'
+                                                  ? 'bg-red-500/15 text-red-500 border border-red-500/20'
+                                                  : 'bg-amber-500/15 text-amber-500 border border-amber-500/20'
+                                            }`}>
+                                              {q.status || 'pendente'}
+                                            </span>
+                                          </td>
+                                          <td className="py-3 text-right">
+                                            <button
+                                              onClick={() => {
+                                                setSelectedQuoteForPdf(q);
+                                                setShowWhatsAppPdfHelper(true);
+                                              }}
+                                              className="p-1 px-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-amber-450 hover:text-slate-950 rounded text-[9px] font-bold text-zinc-500 transition cursor-pointer"
+                                              title="Auxiliar envio PDF"
+                                            >
+                                              Análise PDF
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      );
+                                    });
+                                  })()}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+
+                        </div>
+                      );
+                    })()}
+
+                  </div>
+                )}
+
               </div>
 
               {/* PERSISTENT MOBILE BOTTOM NAVIGATION TAB BAR (Exactly matching screen layouts) */}
@@ -3102,6 +3597,22 @@ export default function App() {
                   <Building2 className="w-5 h-5 stroke-[2.2]" />
                   <span className="text-[9px] font-bold tracking-wide">Empresa</span>
                 </button>
+
+                {/* 6. Admin Panel tab (Exclusive to Administrators) */}
+                {isAdmin && (
+                  <button 
+                    onClick={() => {
+                      setSelectedCalc(null);
+                      setViewportTab('admin');
+                    }}
+                    className={`flex flex-col items-center gap-1 cursor-pointer transition select-none ${
+                      viewportTab === 'admin' ? 'text-red-500 font-extrabold animate-pulse' : 'text-zinc-400 hover:text-zinc-650'
+                    }`}
+                  >
+                    <SquareTerminal className="w-5 h-5 stroke-[2.2] text-red-500" />
+                    <span className="text-[9px] font-extrabold tracking-wide text-red-500">Painel ADM</span>
+                  </button>
+                )}
               </div>
 
             </div>
@@ -3134,6 +3645,119 @@ export default function App() {
                 className="w-full py-2 bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold text-xs rounded-xl transition uppercase tracking-wider cursor-pointer font-mono"
               >
                 Voltar à oficina
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WHATSAPP PDF GUIDE HELPER DIALOG MODAL */}
+      {showWhatsAppPdfHelper && selectedQuoteForPdf && (
+        <div className="fixed inset-0 bg-black/85 flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
+          <div className="w-full max-w-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 space-y-5 shadow-2xl relative animate-scale-up text-zinc-900 dark:text-white my-8">
+            
+            {/* Header */}
+            <div className="flex justify-between items-start">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="p-1 px-2.5 bg-emerald-500 text-white rounded-lg text-[9px] font-black uppercase tracking-wider">Passo a Passo</span>
+                  <span className="text-emerald-500 dark:text-emerald-400 text-xs font-bold font-mono">💬 WhatsApp PDF</span>
+                </div>
+                <h4 className="text-base font-black tracking-tight leading-tight uppercase">Enviar PDF do Orçamento direto para o WhatsApp</h4>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowWhatsAppPdfHelper(false);
+                  setSelectedQuoteForPdf(null);
+                }} 
+                className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Quote details banner */}
+            <div className="p-3 bg-stone-50 dark:bg-zinc-950/60 rounded-2xl border border-zinc-200 dark:border-zinc-850/50 space-y-1.5 text-xs">
+              <div className="text-zinc-500 font-mono flex justify-between">
+                <span>Identificação do Orçamento:</span>
+                <span className="font-bold text-[#d97706]">{selectedQuoteForPdf.id}</span>
+              </div>
+              <div className="text-zinc-500 font-mono flex justify-between">
+                <span>Cliente Responsável:</span>
+                <span className="font-bold text-zinc-800 dark:text-zinc-200">{selectedQuoteForPdf.customerName}</span>
+              </div>
+              {selectedQuoteForPdf.customerPhone && (
+                <div className="text-zinc-500 font-mono flex justify-between">
+                  <span>Contato WhatsApp:</span>
+                  <span className="font-bold text-zinc-800 dark:text-zinc-200">{selectedQuoteForPdf.customerPhone}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Instruction Steps */}
+            <div className="space-y-4 pt-1">
+              
+              {/* Step 1 */}
+              <div className="flex gap-3 px-1 items-start">
+                <div className="w-7 h-7 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-black text-xs shrink-0 select-none">
+                  1
+                </div>
+                <div className="space-y-1.5 flex-1">
+                  <h5 className="font-bold text-xs uppercase tracking-wider">Gerar e Baixar o PDF Oficial</h5>
+                  <p className="text-[11px] text-zinc-500 leading-relaxed font-semibold">
+                    Clique no botão abaixo para gerar o orçamento em papel timbrado. No celular ou computador, escolha a opção <strong className="text-zinc-800 dark:text-zinc-100 font-bold">"Salvar como PDF"</strong> ou <strong className="text-zinc-800 dark:text-zinc-100 font-bold">"Imprimir como PDF"</strong> e salve o documento.
+                  </p>
+                  <button
+                    onClick={() => handleDirectPrintReprnt(selectedQuoteForPdf)}
+                    className="py-2.5 px-3.5 bg-zinc-900 hover:bg-black dark:bg-zinc-800 dark:hover:bg-zinc-750 text-amber-400 rounded-xl transition text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-md inline-flex border border-zinc-700/60"
+                  >
+                    <Printer className="w-3.5 h-3.5 shrink-0" />
+                    <span>Salvar arquivo PDF</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="flex gap-3 px-1 items-start">
+                <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center font-black text-xs shrink-0 select-none">
+                  2
+                </div>
+                <div className="space-y-1.5 flex-1">
+                  <h5 className="font-bold text-xs uppercase tracking-wider">Enviar PDF no Zap do Cliente</h5>
+                  <p className="text-[11px] text-zinc-500 leading-relaxed font-semibold">
+                    Clique no botão abaixo para abrir a conversa direta com o cliente. No WhatsApp, use o botão de <strong className="text-[#25d366] font-bold">Adicionar Anexo (+ ou clipe)</strong> e selecione o PDF que você acabou de baixar no Passo 1!
+                  </p>
+                  <a
+                    href={`https://api.whatsapp.com/send?phone=${(selectedQuoteForPdf.customerPhone || '').replace(/\D/g, '').startsWith('55') ? (selectedQuoteForPdf.customerPhone || '').replace(/\D/g, '') : '55' + (selectedQuoteForPdf.customerPhone || '').replace(/\D/g, '')}&text=${encodeURIComponent(`Olá! Estou te enviando o arquivo PDF do orçamento oficial Ref: ${selectedQuoteForPdf.id} em anexo abaixo.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-2.5 px-3.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-md inline-flex"
+                  >
+                    <Send className="w-3.5 h-3.5 shrink-0" />
+                    <span>Abrir Conversa do WhatsApp</span>
+                  </a>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Platform Constraints Explanation */}
+            <p className="text-[9px] text-zinc-400 dark:text-zinc-500 leading-normal border-t dark:border-zinc-800 pt-3 flex gap-1.5 items-start">
+              <span className="shrink-0 text-amber-500">⚠️</span>
+              <span className="font-normal font-mono">
+                Aviso: O WhatsApp não permite que sites enviem arquivos locais diretamente por razões de privacidade. É necessário primeiro salvar o PDF em seu aparelho (Passo 1), para depois anexá-lo na conversa (Passo 2).
+              </span>
+            </p>
+
+            <div className="pt-2 flex justify-end gap-2 text-xs">
+              <button 
+                onClick={() => {
+                  setShowWhatsAppPdfHelper(false);
+                  setSelectedQuoteForPdf(null);
+                }}
+                className="px-4 py-2 bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-bold rounded-xl transition uppercase tracking-wider cursor-pointer"
+              >
+                Concluir e Voltar
               </button>
             </div>
           </div>

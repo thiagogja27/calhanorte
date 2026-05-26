@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Search, Calendar, CreditCard, Printer, Trash2, Edit3, DollarSign, Send } from 'lucide-react';
+import { Search, Calendar, CreditCard, Printer, Trash2, Edit3, DollarSign, Send, FileText } from 'lucide-react';
 
 interface CalhaZapHistoryProps {
   quotes: any[];
@@ -9,6 +9,7 @@ interface CalhaZapHistoryProps {
   onDeleteQuote: (id: string) => void;
   onEditLoad: (quote: any) => void;
   onPrintQuote: (quote: any) => void;
+  onSendPdfViaWhatsApp?: (quote: any) => void;
   companyName?: string;
 }
 
@@ -18,6 +19,7 @@ export default function CalhaZapHistory({
   onDeleteQuote,
   onEditLoad,
   onPrintQuote,
+  onSendPdfViaWhatsApp,
   companyName = "Oficina de Calhas"
 }: CalhaZapHistoryProps) {
   const [search, setSearch] = useState('');
@@ -169,22 +171,33 @@ export default function CalhaZapHistory({
                 </div>
 
                 <div className="flex sm:flex-col gap-2 justify-end font-bold text-xs shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-[#b0b2b5] dark:border-zinc-800">
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2 items-center">
                     <a
                       href={getWhatsAppUrl(q.customerPhone, formatQuoteWhatsApp(q, companyName))}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex-1 sm:flex-none p-2 bg-emerald-500 text-white hover:bg-emerald-600 rounded-lg transition text-[10px] flex items-center justify-center gap-1 cursor-pointer font-bold"
-                      title="Enviar orçamento direto para o WhatsApp do cliente"
+                      className="flex-1 sm:flex-none p-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition text-[10px] flex items-center justify-center gap-1 cursor-pointer font-bold"
+                      title="Enviar orçamento formatado em texto para o WhatsApp do cliente"
                     >
                       <Send className="w-3.5 h-3.5 shrink-0" />
-                      <span>WhatsApp</span>
+                      <span>WhatsApp Texto</span>
                     </a>
+
+                    {onSendPdfViaWhatsApp && (
+                      <button
+                        onClick={() => onSendPdfViaWhatsApp(q)}
+                        className="flex-1 sm:flex-none p-2 bg-amber-450 hover:bg-amber-500 text-zinc-950 rounded-lg transition text-[10px] flex items-center justify-center gap-1 cursor-pointer font-black"
+                        title="Metodologia prática para enviar o arquivo PDF do orçamento para o WhatsApp do cliente"
+                      >
+                        <FileText className="w-3.5 h-3.5 shrink-0" />
+                        <span>WhatsApp PDF 💬</span>
+                      </button>
+                    )}
 
                     <button
                       onClick={() => onPrintQuote(q)}
                       className="flex-1 sm:flex-none p-2 bg-white dark:bg-zinc-800 border border-[#b0b2b5] dark:border-zinc-700 text-[#5a5c5f] dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition text-[10px] flex items-center justify-center gap-1 hover:text-black dark:hover:text-white cursor-pointer"
-                      title="Ver PDF Papel Timbrado"
+                      title="Ver e Gerar PDF com Papel Timbrado"
                     >
                       <Printer className="w-3.5 h-3.5 shrink-0" />
                       <span className="sm:inline">Imprimir</span>
