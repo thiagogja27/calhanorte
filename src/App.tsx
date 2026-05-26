@@ -896,6 +896,26 @@ export default function App() {
     };
 
     await handleSaveDocToCloud(payload);
+
+    // Auto-save client if not already in clients registry
+    const clientExt = clients.find(c => (c.name || '').trim().toLowerCase() === wName.trim().toLowerCase());
+    if (user && !clientExt) {
+      const newClientId = "CLI-" + Math.floor(10000 + Math.random() * 90000).toString();
+      const clientPayload = {
+        id: newClientId,
+        name: wName,
+        phone: wPhone,
+        address: wAddress,
+        createdAt: new Date().toISOString()
+      };
+      try {
+        const clientRef = ref(db, `clients/${user.uid}/${newClientId}`);
+        await set(clientRef, clientPayload);
+      } catch (err) {
+        console.error("Erro ao auto-cadastrar cliente:", err);
+      }
+    }
+
     alert(`🎉 Sucesso! Orçamento cadastrado na nuvem com o código ${payload.id}`);
     
     // Auto redirect to history list to view or print
@@ -1584,6 +1604,7 @@ export default function App() {
                                           setWName(c.name);
                                           setWPhone(c.phone || '');
                                           setWAddress(c.address || '');
+                                          setWizardClientSearch(c.name);
                                           setWizardStep(1);
                                           setViewportTab('orc');
                                         }}
@@ -1737,6 +1758,12 @@ export default function App() {
                               />
                               <Users className="w-4 h-4 text-zinc-400 absolute left-3.5 top-3 shrink-0" />
                             </div>
+                            {wName && clients.find(c => (c.name || '').trim().toLowerCase() === (wName || '').trim().toLowerCase()) && (
+                              <div className="text-[10px] text-emerald-500 font-bold flex items-center gap-1.5 mt-1 relative p-1.5 bg-emerald-500/10 border border-emerald-500/15 rounded-lg animate-fade-in select-none">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span>✅ Vinculado ao cliente cadastrado: <strong className="underline">{clients.find(c => (c.name || '').trim().toLowerCase() === (wName || '').trim().toLowerCase())?.id}</strong></span>
+                              </div>
+                            )}
                           </div>
 
                           <div className="space-y-1">
