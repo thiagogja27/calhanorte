@@ -244,7 +244,7 @@ export default function App() {
     };
 
     try {
-      const clientRef = ref(db, `companies/${user.uid}/clients/${payload.id}`);
+      const clientRef = ref(db, `quotes/${user.uid}/_clients/${payload.id}`);
       await set(clientRef, payload);
       alert(cEditingId ? "Cliente atualizado com sucesso!" : "Cliente cadastrado com sucesso! 🎉");
       
@@ -270,7 +270,7 @@ export default function App() {
     if (!user) return;
     if (!confirm("Confirmar a exclusão permanente deste cliente? Isso não apagará os orçamentos existentes do mesmo.")) return;
     try {
-      const clientRef = ref(db, `companies/${user.uid}/clients/${clientId}`);
+      const clientRef = ref(db, `quotes/${user.uid}/_clients/${clientId}`);
       await remove(clientRef);
       alert("Cliente excluído.");
     } catch (err: any) {
@@ -331,14 +331,16 @@ export default function App() {
       const arr: any[] = [];
       if (snapshot.exists()) {
         snapshot.forEach((child) => {
-          arr.push(child.val());
+          if (child.key !== '_clients') {
+            arr.push(child.val());
+          }
         });
       }
       setQuotes(arr.reverse()); // Put newest first
     });
 
     // Sync Clients
-    const clientsRef = ref(db, `companies/${user.uid}/clients`);
+    const clientsRef = ref(db, `quotes/${user.uid}/_clients`);
     const unsubClients = onValue(clientsRef, (snapshot) => {
       const arr: any[] = [];
       if (snapshot.exists()) {
@@ -910,7 +912,7 @@ export default function App() {
         createdAt: new Date().toISOString()
       };
       try {
-        const clientRef = ref(db, `companies/${user.uid}/clients/${newClientId}`);
+        const clientRef = ref(db, `quotes/${user.uid}/_clients/${newClientId}`);
         await set(clientRef, clientPayload);
       } catch (err) {
         console.error("Erro ao auto-cadastrar cliente:", err);
