@@ -22,7 +22,8 @@ import {
   ref, 
   set, 
   remove, 
-  onValue 
+  onValue,
+  update
 } from 'firebase/database';
 
 // Modular CalhaZap Components
@@ -326,23 +327,20 @@ export default function App() {
       return;
     }
 
-    const userProfileRef = ref(db, `users/${user.uid}`);
-    const unsubUserRole = onValue(userProfileRef, (snapshot) => {
+    const companyRoleRef = ref(db, `companies/${user.uid}/role`);
+    const unsubUserRole = onValue(companyRoleRef, (snapshot) => {
       if (snapshot.exists()) {
-        const data = snapshot.val();
-        const role = data.role || 'cliente';
+        const role = snapshot.val() || 'cliente';
         setUserRole(role);
       } else {
         const defaultRole = (user.email === 'thiago.viaembratelgja@gmail.com' || user.email?.toLowerCase().includes('admin')) ? 'admin' : 'cliente';
-        set(userProfileRef, {
-          uid: user.uid,
-          email: user.email || '',
-          displayName: user.displayName || '',
-          role: defaultRole,
-          createdAt: new Date().toISOString()
-        }).then(() => {
+        set(companyRoleRef, defaultRole).then(() => {
           setUserRole(defaultRole);
         });
+        
+        // Also save user metadata inside companies table so they can recognize who the uid belongs to in their console
+        const companyEmailRef = ref(db, `companies/${user.uid}/email`);
+        set(companyEmailRef, user.email || '');
       }
     });
 
@@ -725,7 +723,7 @@ export default function App() {
     if (!user) return;
     try {
       const companyRef = ref(db, `companies/${user.uid}`);
-      await set(companyRef, {
+      await update(companyRef, {
         name: companyName,
         cnpj: companyCNPJ,
         phone: companyPhone,
