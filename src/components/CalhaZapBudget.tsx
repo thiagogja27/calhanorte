@@ -37,7 +37,7 @@ export default function CalhaZapBudget({
   const [validDays, setValidDays] = useState(15);
   const [discountPercent, setDiscountPercent] = useState(0);
   const [paymentCondition, setPaymentCondition] = useState('À vista: 50% de entrada + 50% na entrega');
-  const [notes, setNotes] = useState('Garantia de 1 ano contra infiltrações e oxidação natural.');
+  const [notes, setNotes] = useState('Materiais para fixação inclusos.');
 
   // Current Selections
   const [selTile, setSelTile] = useState('Trapézio 25');
@@ -422,7 +422,7 @@ export default function CalhaZapBudget({
               <td style="width: 100%; vertical-align: top;">
                 <strong>Condições de Pagamento:</strong><br/>
                 ${paymentCondition}<br/><br/>
-                <strong>Termo de Compromisso:</strong><br/>
+                <strong>Observações Adicionais:</strong><br/>
                 ${notes}
               </td>
             </tr>
@@ -996,12 +996,12 @@ export default function CalhaZapBudget({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">Garantias / Avisos</label>
+                <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">Anotações / Observações</label>
                 <input
                   type="text"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Ex: Garantia de 1 ano"
+                  placeholder="Ex: Materiais para fixação inclusos"
                   className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-semibold text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
                 />
               </div>
@@ -1141,7 +1141,7 @@ export default function CalhaZapBudget({
 
           <div className="bg-[#f2f3f4] rounded-xl border border-[#b0b2b5] px-3 py-2 text-[11px] leading-relaxed mt-4 font-semibold text-[#3a3a3a] space-y-1">
             <div>💳 <strong>Condição Comercial:</strong> {paymentCondition}</div>
-            {notes && <div>🧾 <strong>Garantia & Acabamento:</strong> {notes}</div>}
+            {notes && <div>🧾 <strong>Observações Adicionais:</strong> {notes}</div>}
           </div>
         </div>
 

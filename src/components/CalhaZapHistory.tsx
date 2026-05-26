@@ -82,7 +82,7 @@ export default function CalhaZapHistory({
     }
     text += `*💰 TOTAL DA PROPOSTA:* R$ ${q.total?.toFixed(2)}\n`;
     if (q.notes) {
-      text += `\n*Garantia / Observações:* ${q.notes}\n`;
+      text += `\n*Observações:* ${q.notes}\n`;
     }
     text += `-------------------------------------------\n`;
     text += `_Aguardamos sua aprovação para iniciar a fabricação!_`;

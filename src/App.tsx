@@ -80,6 +80,7 @@ export default function App() {
   const [allClients, setAllClients] = useState<any[]>([]);
   const [selectedAdminCompanyFilter, setSelectedAdminCompanyFilter] = useState<string>('all');
   const [adminSearchQuery, setAdminSearchQuery] = useState<string>('');
+  const [adminPermissionError, setAdminPermissionError] = useState<boolean>(false);
 
   // Selected Active Calculator
   const [selectedCalc, setSelectedCalc] = useState<null | 'metragem' | 'metro-kg' | 'corte' | 'incline'>(null);
@@ -172,7 +173,7 @@ export default function App() {
   // Step 5 labor / additional services
   const [laborPrice, setLaborPrice] = useState(350.00);
   const [discountPercent, setDiscountPercent] = useState(5);
-  const [wNotes, setWNotes] = useState('Garantia especial de 1 ano contra vazamentos, oxidações e falhas de fixação nas presilhas.');
+  const [wNotes, setWNotes] = useState('Materiais para fixação inclusos.');
 
   // Live Calculations for Wizard
   const calcWizardTotal = () => {
@@ -420,6 +421,7 @@ export default function App() {
     let unsubAllQuotes = () => {};
 
     if (userRole === 'admin') {
+      setAdminPermissionError(false); // Reset on mount / role change
       const companiesRef = ref(db, 'companies');
       unsubAllCompanies = onValue(companiesRef, (snapshot) => {
         const arr: any[] = [];
@@ -432,6 +434,9 @@ export default function App() {
           });
         }
         setAllCompanies(arr);
+      }, (err) => {
+        console.error("Erro ao ler empresas (Admin):", err);
+        setAdminPermissionError(true);
       });
 
       const rootQuotesRef = ref(db, 'quotes');
@@ -461,6 +466,9 @@ export default function App() {
         }
         setAllQuotes(quotesArr.reverse());
         setAllClients(clientsArr);
+      }, (err) => {
+        console.error("Erro ao ler orçamentos (Admin):", err);
+        setAdminPermissionError(true);
       });
     }
 
@@ -2663,7 +2671,7 @@ export default function App() {
                           </div>
 
                           <div className="space-y-1">
-                            <label className="text-xs font-bold text-zinc-400">Termos, Garantias e Notas</label>
+                            <label className="text-xs font-bold text-zinc-400">Anotações / Observações</label>
                             <textarea 
                               value={wNotes}
                               onChange={(e) => setWNotes(e.target.value)}
@@ -3198,6 +3206,45 @@ export default function App() {
                         </p>
                       </div>
                     </div>
+
+                    {/* Admin Permission Warning Alert Box */}
+                    {adminPermissionError && (
+                      <div className="p-4 rounded-3xl bg-red-500/10 border border-red-500/20 text-red-400 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">⚠️</span>
+                          <h4 className="text-xs font-black uppercase tracking-wider">Acesso Restrito - Regras do Database</h4>
+                        </div>
+                        <p className="text-[10px] leading-relaxed text-zinc-300">
+                          As regras de segurança atuais do seu Firebase impedem o usuário admin de ler todas as pastas de empresas/orçamentos. 
+                          Para habilitar o painel, acesse o <strong>Firebase Console &gt; Realtime Database &gt; Rules</strong> e substitua as regras por estas:
+                        </p>
+                        <pre className="p-3 bg-zinc-950 rounded-xl text-[9px] font-mono text-emerald-400 overflow-x-auto select-all max-h-40">
+{`{
+  "rules": {
+    "companies": {
+      "$userId": {
+        ".read": "auth != null && (auth.uid === $userId || root.child('companies').child(auth.uid).child('role').val() === 'admin')",
+        ".write": "auth != null && (auth.uid === $userId || root.child('companies').child(auth.uid).child('role').val() === 'admin')"
+      },
+      ".read": "auth != null && root.child('companies').child(auth.uid).child('role').val() === 'admin'",
+      ".write": "auth != null && root.child('companies').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "quotes": {
+      "$userId": {
+        ".read": "auth != null && (auth.uid === $userId || root.child('companies').child(auth.uid).child('role').val() === 'admin')",
+        ".write": "auth != null && (auth.uid === $userId || root.child('companies').child(auth.uid).child('role').val() === 'admin')"
+      },
+      ".read": "auth != null && root.child('companies').child(auth.uid).child('role').val() === 'admin'",
+      ".write": "auth != null && root.child('companies').child(auth.uid).child('role').val() === 'admin'"
+    }
+  }
+}`}
+                        </pre>
+                        <p className="text-[9px] text-zinc-400 font-semibold leading-relaxed">
+                          💡 Essa configuração garante que usuários comuns de oficinas só vejam suas próprias propostas, enquanto o usuário admin tem permissão total de leitura integrada.
+                        </p>
+                      </div>
+                    )}
 
                     {/* KEY AGGREGATED STATISTICS GRID */}
                     {(() => {
