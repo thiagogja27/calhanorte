@@ -34,6 +34,8 @@ import AcoAssistant from './components/AcoAssistant';
 
 export default function App() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [userRole, setUserRole] = useState<'admin' | 'cliente'>('cliente');
+  const [hasRedirected, setHasRedirected] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
@@ -212,7 +214,7 @@ export default function App() {
   const [notifs, setNotifs] = useState<{ id: string; type: string; title: string; desc: string; time: string; read: boolean; }[]>([]);
 
   const unreadCount = notifs.filter(n => !n.read).length;
-  const isAdmin = !!(user && (user.email === 'thiago.viaembratelgja@gmail.com' || user.email?.toLowerCase().includes('admin')));
+  const isAdmin = userRole === 'admin';
 
   const markAllNotifsRead = () => {
     setNotifs(prev => prev.map(n => ({ ...n, read: true })));
@@ -316,6 +318,52 @@ export default function App() {
     };
   }, []);
 
+  // Dynamic User Profile & Role Synchronization
+  useEffect(() => {
+    if (!user) {
+      setUserRole('cliente');
+      setHasRedirected(false);
+      return;
+    }
+
+    const userProfileRef = ref(db, `users/${user.uid}`);
+    const unsubUserRole = onValue(userProfileRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const role = data.role || 'cliente';
+        setUserRole(role);
+      } else {
+        const defaultRole = (user.email === 'thiago.viaembratelgja@gmail.com' || user.email?.toLowerCase().includes('admin')) ? 'admin' : 'cliente';
+        set(userProfileRef, {
+          uid: user.uid,
+          email: user.email || '',
+          displayName: user.displayName || '',
+          role: defaultRole,
+          createdAt: new Date().toISOString()
+        }).then(() => {
+          setUserRole(defaultRole);
+        });
+      }
+    });
+
+    return () => {
+      unsubUserRole();
+    };
+  }, [user]);
+
+  // First-time Logon Redirection based on dynamically loaded DB Role
+  useEffect(() => {
+    if (user && userRole && !hasRedirected) {
+      if (userRole === 'admin') {
+        setViewportTab('admin');
+      } else {
+        setViewportTab('home');
+      }
+      setHasRedirected(true);
+    }
+  }, [user, userRole, hasRedirected]);
+
+  // Sync quotes, clients, company, and multi-company admin lists
   useEffect(() => {
     if (!user) {
       setQuotes([]);
@@ -364,11 +412,10 @@ export default function App() {
     });
 
     // Multi-Company Real-time Admin Sync Flow
-    const isUserAdmin = user && (user.email === 'thiago.viaembratelgja@gmail.com' || user.email?.toLowerCase().includes('admin'));
     let unsubAllCompanies = () => {};
     let unsubAllQuotes = () => {};
 
-    if (isUserAdmin) {
+    if (userRole === 'admin') {
       const companiesRef = ref(db, 'companies');
       unsubAllCompanies = onValue(companiesRef, (snapshot) => {
         const arr: any[] = [];
@@ -411,8 +458,6 @@ export default function App() {
         setAllQuotes(quotesArr.reverse());
         setAllClients(clientsArr);
       });
-
-      setViewportTab('admin');
     }
 
     try {
@@ -427,7 +472,7 @@ export default function App() {
       unsubAllCompanies();
       unsubAllQuotes();
     };
-  }, [user]);
+  }, [user, userRole]);
 
   // Auth Functions
   const handleAuthSubmit = async (e: React.FormEvent) => {
@@ -453,6 +498,8 @@ export default function App() {
 
   const handleSignOut = async () => {
     try {
+      setHasRedirected(false);
+      setUserRole('cliente');
       await signOut(auth);
     } catch (e) {
       console.error(e);
