@@ -133,7 +133,7 @@ export default function App() {
   const [rufoQty, setRufoQty] = useState(3);
   const [rufoPrice, setRufoPrice] = useState(33.00);
 
-  // Step 4 condutores / chaminé / PU-40 / accessories
+  // Step 4 condutores / chaminé / coifa / PU-40 / accessories
   const [wCondQty, setWCondQty] = useState(2);
   const [wCondType, setWCondType] = useState('Retangular Galvalume 5x10');
   const [wCondLen, setWCondLen] = useState(3.0);
@@ -143,6 +143,14 @@ export default function App() {
   const [wChamType, setWChamType] = useState('Chaminé de Lareira Galvanizada');
   const [wChamDiam, setWChamDiam] = useState(150);
   const [wChamPrice, setWChamPrice] = useState(115.00);
+  const [wChamMaterial, setWChamMaterial] = useState('Galvanizado');
+
+  // Coifas states
+  const [wCoifaQty, setWCoifaQty] = useState(0);
+  const [wCoifaType, setWCoifaType] = useState('Coifa de Churrasqueira');
+  const [wCoifaSize, setWCoifaSize] = useState('80 cm');
+  const [wCoifaPrice, setWCoifaPrice] = useState(480.00);
+  const [wCoifaMaterial, setWCoifaMaterial] = useState('Galvanizado');
 
   const [puQty, setPuQty] = useState(2);
   const [puPrice, setPuPrice] = useState(22.00);
@@ -160,6 +168,7 @@ export default function App() {
     wRufoItems.forEach(it => sub += it.total);
     sub += wCondQty * wCondPrice * wCondLen;
     sub += wChamQty * wChamPrice;
+    sub += wCoifaQty * wCoifaPrice;
     sub += puQty * puPrice;
     sub += laborPrice;
 
@@ -414,13 +423,62 @@ export default function App() {
     if (oldQuote.telhas) oldQuote.telhas.forEach((it: any) => allItems.push(it));
     if (oldQuote.calhas) oldQuote.calhas.forEach((it: any) => allItems.push(it));
     if (oldQuote.rufos) oldQuote.rufos.forEach((it: any) => allItems.push(it));
-    if (oldQuote.condutores) {
+    
+    if (oldQuote.condutores && oldQuote.condutores.qtd > 0) {
       allItems.push({
-        desc: 'Condutores Pluviais Tubulagem',
-        specs: `Comprimento acumulado: 12m`,
-        qtd: oldQuote.condutores.qtd || 2,
+        desc: `Condutor: ${oldQuote.condutores.desc || 'Tubo de Descida Pluvial'}`,
+        specs: `Especial de vazão rápida`,
+        qtd: oldQuote.condutores.qtd,
         unit: oldQuote.condutores.unit || 21.00,
-        total: oldQuote.condutores.total || 126.00
+        total: oldQuote.condutores.total
+      });
+    }
+
+    if (oldQuote.chamines) {
+      oldQuote.chamines.forEach((it: any) => {
+        if (it.qtd > 0) {
+          allItems.push({
+            desc: `Chaminé / Exaustão: ${it.desc}`,
+            specs: it.specs || 'Diâmetro padrão',
+            qtd: it.qtd,
+            unit: it.unit,
+            total: it.total
+          });
+        }
+      });
+    }
+
+    if (oldQuote.coifas) {
+      oldQuote.coifas.forEach((it: any) => {
+        if (it.qtd > 0) {
+          allItems.push({
+            desc: `Coifa de Exaustão: ${it.desc}`,
+            specs: it.specs || 'Medida padrão',
+            qtd: it.qtd,
+            unit: it.unit,
+            total: it.total
+          });
+        }
+      });
+    }
+
+    if (oldQuote.puQty && oldQuote.puQty > 0) {
+      allItems.push({
+        desc: 'Bisnaga Silicone Vedação PU-40',
+        specs: 'Alta aderência e vedação contra goteiras',
+        qtd: oldQuote.puQty,
+        unit: oldQuote.puPrice || 22.00,
+        total: oldQuote.puQty * (oldQuote.puPrice || 22.00)
+      });
+    }
+
+    if (oldQuote.laborPrice && oldQuote.laborPrice > 0) {
+      allItems.push({
+        desc: 'Mão de Obra e Instalação em Obra',
+        specs: 'Montagem, alinhamento e estanqueidade térmica',
+        qtd: 1,
+        unit: oldQuote.laborPrice,
+        total: oldQuote.laborPrice
       });
     }
 
@@ -579,6 +637,7 @@ export default function App() {
       rufos: wRufoItems,
       puQty: puQty,
       puPrice: puPrice,
+      laborPrice: laborPrice,
       condutores: {
         desc: wCondType,
         qtd: wCondQty,
@@ -587,10 +646,17 @@ export default function App() {
       },
       chamines: [{
         desc: wChamType,
-        specs: `Ø ${wChamDiam}mm`,
+        specs: `Ø ${wChamDiam}mm - ${wChamMaterial}`,
         qtd: wChamQty,
         unit: wChamPrice,
         total: wChamQty * wChamPrice
+      }],
+      coifas: [{
+        desc: wCoifaType,
+        specs: `Tamanho: ${wCoifaSize} - ${wCoifaMaterial}`,
+        qtd: wCoifaQty,
+        unit: wCoifaPrice,
+        total: wCoifaQty * wCoifaPrice
       }],
       subtotal: wSubtotal,
       discountPercent: discountPercent,
@@ -610,6 +676,8 @@ export default function App() {
     setWTileItems([]);
     setWGutterItems([]);
     setWRufoItems([]);
+    setWChamQty(1);
+    setWCoifaQty(0);
     setViewportTab('hist');
   };
 
@@ -1116,36 +1184,66 @@ export default function App() {
 
                     {/* STEP 2: COVERAGE / TILES */}
                     {wizardStep === 2 && (
-                      <div className="space-y-4">
-                        <div className="space-y-0.5">
-                          <h3 className="text-base font-extrabold">Telhas e Cobertura Metálica</h3>
-                          <p className="text-xs text-zinc-400">Geração de chapas de cobertura galvalume / zinco</p>
+                      <div className="space-y-5 animate-fade-in">
+                        <div className="space-y-1">
+                          <h3 className="text-base font-extrabold flex items-center gap-1.5">
+                            <span className="text-xl">🏠</span> Telhas e Cobertura Metálica
+                          </h3>
+                          <p className="text-xs text-zinc-400">Escolha o modelo da telha e veja o desenho dele</p>
                         </div>
 
-                        <div className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-850 dark:bg-zinc-900/40 space-y-3.5">
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-bold text-zinc-400">Modelo da Telha</label>
-                            <select 
-                              value={selTileType}
-                              onChange={(e) => setSelTileType(e.target.value)}
-                              className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-bold outline-none text-[#1a1a1a] dark:text-white"
-                            >
-                              <option>Trapézio 25</option>
-                              <option>Trapézio 40</option>
-                              <option>Ondulada 17</option>
-                              <option>Sanduíche Termoacústica</option>
-                            </select>
+                        {/* Interactive Visual Figures for Tiles */}
+                        <div className="space-y-2">
+                          <span className="text-xs font-bold text-zinc-400 block pb-1">Selecione o Modelo do Perfil:</span>
+                          <div className="grid grid-cols-2 gap-3">
+                            {[
+                              { name: 'Trapézio 25', desc: 'Ondas quadradas médias', fig: '╱▔╲╱▔╲╱▔╲', price: 38.5 },
+                              { name: 'Trapézio 40', desc: 'Ondas quadradas altas', fig: '╱▔▔╲___╱▔▔╲', price: 44.0 },
+                              { name: 'Ondulada 17', desc: 'Ondas suaves redondas', fig: '~~~~~~~~', price: 35.0 },
+                              { name: 'Sanduie Termoacústica', desc: 'Isolante termoacústico', fig: '█▄█▄█▄█▄█', price: 85.0 }
+                            ].map((tile) => (
+                              <button
+                                key={tile.name}
+                                onClick={() => {
+                                  setSelTileType(tile.name);
+                                  setTilePrice(tile.price);
+                                }}
+                                className={`p-3 text-left border rounded-2xl transition duration-200 cursor-pointer flex flex-col gap-1.5 relative overflow-hidden ${
+                                  selTileType === tile.name 
+                                    ? 'border-amber-400 bg-amber-500/10 shadow-md ring-1 ring-amber-400' 
+                                    : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 hover:bg-zinc-50'
+                                }`}
+                              >
+                                {selTileType === tile.name && (
+                                  <div className="absolute right-2 top-2 bg-amber-500 text-zinc-950 rounded-full p-0.5">
+                                    <Check className="w-3 h-3 stroke-[3]" />
+                                  </div>
+                                )}
+                                <span className="font-extrabold text-xs text-zinc-800 dark:text-zinc-100">{tile.name}</span>
+                                <span className="text-[10px] text-zinc-500 block leading-tight">{tile.desc}</span>
+                                
+                                {/* ASCII Shape Drawing Box */}
+                                <div className="mt-2 bg-neutral-100 dark:bg-neutral-900 text-amber-600 dark:text-amber-400 font-mono text-[11px] py-1.5 px-3 rounded-lg text-center tracking-widest font-black select-none">
+                                  {tile.fig}
+                                </div>
+                              </button>
+                            ))}
                           </div>
+                        </div>
 
+                        <div className="p-4 rounded-2xl border border-zinc-200 dark:border-zinc-850 dark:bg-zinc-900/40 space-y-4">
                           <div className="space-y-1.5">
                             <label className="text-xs font-bold text-zinc-400">Material de Composição</label>
-                            <div className="flex gap-1.5 flex-wrap">
-                              {['Galvalume', 'Galvanizado', 'Alumínio', 'Pré-Pintada'].map((m) => (
+                            <div className="grid grid-cols-4 gap-1.5">
+                              {['Galvalume', 'Galvanizado', 'Alumínio', 'Inox'].map((m) => (
                                 <button
                                   key={m}
+                                  type="button"
                                   onClick={() => setSelTileMat(m)}
-                                  className={`flex-1 py-1.5 px-3 border rounded-xl text-[10px] font-bold uppercase transition ${
-                                    selTileMat === m ? 'border-amber-500 bg-amber-500 text-zinc-950 font-black' : 'border-zinc-300 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-500'
+                                  className={`py-2 px-1 text-center border rounded-xl text-[9px] font-black uppercase transition duration-200 cursor-pointer ${
+                                    selTileMat === m 
+                                      ? 'border-amber-400 bg-amber-500 text-zinc-950 font-black' 
+                                      : 'border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-500'
                                   }`}
                                 >
                                   {m}
@@ -1154,58 +1252,64 @@ export default function App() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-2 gap-3.5">
                             <div className="space-y-1">
                               <label className="text-xs font-bold text-zinc-400">Comprimento (m)</label>
                               <input 
                                 type="number" 
-                                value={tileLen}
+                                value={tileLen || ""}
                                 onChange={(e) => setTileLen(Math.max(1, parseFloat(e.target.value) || 0))}
-                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 rounded-xl px-3 py-2 text-xs text-[#1a1a1a] dark:text-white font-bold outline-none"
                               />
+                              <p className="text-[9px] text-zinc-500">Tamanho de cada cobertura</p>
                             </div>
                             <div className="space-y-1">
-                              <label className="text-xs font-bold text-zinc-400">Quantidade (un)</label>
+                              <label className="text-xs font-bold text-zinc-400">Quantidade (Placas)</label>
                               <input 
                                 type="number" 
-                                value={tileQty}
+                                value={tileQty || ""}
                                 onChange={(e) => setTileQty(Math.max(1, parseInt(e.target.value) || 0))}
-                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 rounded-xl px-3 py-2 text-xs text-[#1a1a1a] dark:text-white font-bold outline-none"
                               />
+                              <p className="text-[9px] text-zinc-500">Número de chapas totais</p>
                             </div>
                           </div>
 
-                          <div className="space-y-1">
-                            <label className="text-xs font-bold text-zinc-403">Preço Estimado do m² (R$)</label>
-                            <input 
-                              type="number"
-                              value={tilePrice}
-                              onChange={(e) => setTilePrice(Math.max(1, parseFloat(e.target.value) || 0))}
-                              className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
-                            />
+                          <div className="grid grid-cols-1 gap-2">
+                            <div className="space-y-1">
+                              <label className="text-xs font-bold text-zinc-400">Preço do m² (R$)</label>
+                              <input 
+                                type="number"
+                                value={tilePrice || ""}
+                                onChange={(e) => setTilePrice(Math.max(1, parseFloat(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-850 rounded-xl px-3 py-2 text-xs text-emerald-500 font-extrabold outline-none"
+                              />
+                            </div>
                           </div>
 
                           <button 
                             onClick={addTileToStep}
-                            className="w-full py-2 bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 rounded-xl font-bold text-[11px] uppercase tracking-wider transition"
+                            className="w-full py-2.5 bg-amber-100 hover:bg-amber-200 text-amber-950 border border-amber-300 rounded-xl font-bold text-xs uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1"
                           >
-                            + Adicionar Área de Cobertura
+                            <span>+ Guardar e Somar Cobertura</span>
                           </button>
                         </div>
 
                         {/* List of active added coverage items */}
                         {wTileItems.length > 0 && (
-                          <div className="space-y-1.5">
-                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block">Ítens Coberturas Registrados:</span>
-                            {wTileItems.map((it, idx) => (
-                              <div key={it.id} className="p-3 bg-zinc-200/50 dark:bg-zinc-900 rounded-xl flex justify-between items-center text-xs">
+                          <div className="space-y-2">
+                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest block">🏠 Coberturas Adicionadas ao Preço:</span>
+                            {wTileItems.map((it) => (
+                              <div key={it.id} className="p-3 bg-zinc-100 dark:bg-zinc-900 rounded-xl flex justify-between items-center text-xs border dark:border-zinc-850">
                                 <div>
-                                  <span className="font-extrabold">{it.desc}</span>
+                                  <span className="font-extrabold text-zinc-800 dark:text-zinc-100">{it.desc}</span>
                                   <p className="text-[10px] text-zinc-500 font-bold">{it.specs} • R$ {it.unit}/m²</p>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                  <strong className="font-bold">R$ {it.total.toFixed(2)}</strong>
-                                  <button onClick={() => setWTileItems(wTileItems.filter(p => p.id !== it.id))} className="text-red-500"><Trash2 className="w-4 h-4" /></button>
+                                  <strong className="font-black text-emerald-600 dark:text-emerald-400">R$ {it.total.toFixed(2)}</strong>
+                                  <button onClick={() => setWTileItems(wTileItems.filter(p => p.id !== it.id))} className="text-red-500 rounded p-1 hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer">
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
                                 </div>
                               </div>
                             ))}
@@ -1213,226 +1317,495 @@ export default function App() {
                         )}
 
                         <div className="flex gap-2.5 pt-2">
-                          <button onClick={() => setWizardStep(1)} className="flex-1 py-3 bg-zinc-500 text-white rounded-xl font-bold text-xs">Voltar</button>
-                          <button onClick={() => setWizardStep(3)} className="flex-1 py-3 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-xl font-bold text-xs">Avançar para Calhas →</button>
+                          <button onClick={() => setWizardStep(1)} className="flex-1 py-3 bg-zinc-500/10 hover:bg-zinc-500/20 text-zinc-700 dark:text-white rounded-xl font-bold text-xs cursor-pointer transition">Voltar</button>
+                          <button onClick={() => setWizardStep(3)} className="flex-1 py-3 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-xl font-black text-xs cursor-pointer transition flex items-center justify-center gap-1.5">
+                            <span>Seguir para Calhas ➡️</span>
+                          </button>
                         </div>
                       </div>
                     )}
 
                     {/* STEP 3: GUTTERS AND FLASHINGS (CALHAS E RUFOS) */}
                     {wizardStep === 3 && (
-                      <div className="space-y-4">
-                        <div className="space-y-0.5">
-                          <h3 className="text-base font-extrabold font-condensed">Calhas e Rufos de Escoamento</h3>
-                          <p className="text-xs text-zinc-400">Configure as dobragens em chapas galvanizadas</p>
+                      <div className="space-y-5 animate-fade-in">
+                        <div className="space-y-1">
+                          <h3 className="text-base font-extrabold flex items-center gap-1.5">
+                            <span className="text-xl">🌊</span> Calhas e Rufos Sob Medida
+                          </h3>
+                          <p className="text-xs text-zinc-400">Toque no modelo desejado de calha ou de rufo</p>
                         </div>
 
                         {/* Setup Calha inputs box */}
-                        <div className="p-4.5 rounded-2xl border border-zinc-200 dark:border-zinc-850 dark:bg-zinc-900/30 space-y-3">
-                          <span className="text-xs uppercase font-black text-amber-500 tracking-wider">🔩 1. Calha sob Medida</span>
+                        <div className="p-4 rounded-3xl border border-zinc-200 dark:border-zinc-850 dark:bg-zinc-900/30 space-y-4">
+                          <span className="text-xs uppercase font-extrabold text-amber-500 tracking-wider flex items-center gap-1">🛠️ 1. Calha sob Medida</span>
                           
-                          <div className="space-y-1">
-                            <label className="text-xs font-bold text-zinc-400">Modelo Calha</label>
-                            <select 
-                              value={selGutterType}
-                              onChange={(e) => setSelGutterType(e.target.value)}
-                              className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white font-bold"
-                            >
-                              <option>Calha Moldura Pluvia</option>
-                              <option>Calha Americana Pingadeira</option>
-                              <option>Calha Quadrada de Beiral</option>
-                              <option>Calha Platibanda de Sobrecarga</option>
-                            </select>
+                          {/* Visual Selectors for Gutters */}
+                          <div className="grid grid-cols-2 gap-2 pb-1">
+                            {[
+                              { name: 'Calha Moldura', desc: 'Decorativa e elegante', fig: '|───_┘', price: 42.0 },
+                              { name: 'Calha Americana', desc: 'Arredondada de beiral', fig: '╰─────╯', price: 48.0 },
+                              { name: 'Calha Quadrada', desc: 'Reforçada em esquadra', fig: '└───┘', price: 45.0 },
+                              { name: 'Calha Platibanda', desc: 'Entre paredes e muros', fig: '│▔▔▔│', price: 52.0 }
+                            ].map((g) => (
+                              <button
+                                key={g.name}
+                                type="button"
+                                onClick={() => {
+                                  setSelGutterType(g.name);
+                                  setGutterPrice(g.price);
+                                }}
+                                className={`p-2.5 text-left border rounded-xl text-xs transition duration-200 cursor-pointer flex flex-col gap-1 relative ${
+                                  selGutterType === g.name 
+                                    ? 'border-amber-400 bg-amber-500/10 ring-1 ring-amber-400' 
+                                    : 'border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:bg-zinc-50'
+                                }`}
+                              >
+                                <span className="font-bold text-zinc-800 dark:text-zinc-100 text-[11px]">{g.name}</span>
+                                <span className="text-[9px] text-zinc-500 pb-0.5">{g.desc}</span>
+                                <span className="text-[10px] font-mono font-black text-amber-600 dark:text-amber-400 bg-zinc-100 dark:bg-zinc-900 px-1 py-0.5 rounded text-center">
+                                  {g.fig}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="text-[10px] font-bold text-zinc-400">Desenvolvimento (mm)</label>
+                              <input 
+                                type="number" 
+                                value={gutterCut || ""}
+                                onChange={(e) => setGutterCut(Math.max(10, parseInt(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1 text-xs text-[#1a1a1a] dark:text-white font-bold outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-bold text-zinc-400">Comprimento (m)</label>
+                              <input 
+                                type="number" 
+                                value={gutterLen || ""}
+                                onChange={(e) => setGutterLen(Math.max(1, parseFloat(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1 text-xs text-[#1a1a1a] dark:text-white font-bold outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-bold text-zinc-400">Quant. Barras</label>
+                              <input 
+                                type="number" 
+                                value={gutterQty || 1}
+                                onChange={(e) => setGutterQty(Math.max(1, parseInt(e.target.value) || 1))}
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1 text-xs text-[#1a1a1a] dark:text-white font-bold outline-none"
+                              />
+                            </div>
                           </div>
 
                           <div className="grid grid-cols-2 gap-2">
-                            <div className="space-y-1">
-                              <label className="text-xs font-bold text-zinc-400">Corte Desenvolvimento (mm)</label>
+                            <div>
+                              <label className="text-[10px] font-bold text-zinc-400">Valor Ajustado por Metro (R$)</label>
                               <input 
                                 type="number" 
-                                value={gutterCut}
-                                onChange={(e) => setGutterCut(Math.max(10, parseInt(e.target.value) || 0))}
-                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                                value={gutterPrice || ""}
+                                onChange={(e) => setGutterPrice(Math.max(0, parseFloat(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-150 dark:border-zinc-800 rounded-lg px-2 py-1 text-xs text-emerald-500 font-bold outline-none"
                               />
                             </div>
-                            <div className="space-y-1">
-                              <label className="text-xs font-bold text-zinc-400">Comprimento (m)</label>
-                              <input 
-                                type="number" 
-                                value={gutterLen}
-                                onChange={(e) => setGutterLen(Math.max(1, parseFloat(e.target.value) || 0))}
-                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
-                              />
+                            <div className="space-y-0.5">
+                              <label className="text-[10px] font-bold text-zinc-400 uppercase">Material</label>
+                              <select 
+                                value={selGutterMat}
+                                onChange={(e) => setSelGutterMat(e.target.value)}
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-150 dark:border-zinc-800 rounded-lg px-2 py-1 text-xs font-bold text-[#1a1a1a] dark:text-white outline-none"
+                              >
+                                <option>Galvalume</option>
+                                <option>Galvanizado</option>
+                                <option>Alumínio</option>
+                                <option>Inox</option>
+                              </select>
                             </div>
                           </div>
 
                           <button 
                             onClick={addGutterToStep}
-                            className="w-full py-1.5 bg-yellow-100 text-yellow-850 border border-yellow-250 text-[10px] font-black uppercase tracking-wide rounded-lg"
+                            className="w-full py-1.5 bg-yellow-100 hover:bg-yellow-200 text-yellow-850 border border-yellow-250 text-[10px] font-black uppercase tracking-wide rounded-lg cursor-pointer transition"
                           >
-                            + Adicionar Linha de Calha
+                            + Guardar Linha de Calha
                           </button>
                         </div>
 
                         {/* Setup Rufo inputs box */}
-                        <div className="p-4.5 rounded-2xl border border-zinc-200 dark:border-zinc-850 dark:bg-zinc-900/30 space-y-3">
-                          <span className="text-xs uppercase font-black text-amber-500 tracking-wider">🔩 2. Rufos / Contra Rufo</span>
+                        <div className="p-4 rounded-3xl border border-zinc-200 dark:border-zinc-850 dark:bg-zinc-900/30 space-y-4">
+                          <span className="text-xs uppercase font-extrabold text-amber-500 tracking-wider flex items-center gap-1">🛡️ 2. Rufos / Contra Rufo</span>
                           
-                          <div className="space-y-1">
-                            <label className="text-xs font-bold text-zinc-400">Modelo Rufo</label>
-                            <select 
-                              value={selRufoType}
-                              onChange={(e) => setSelRufoType(e.target.value)}
-                              className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white font-bold"
-                            >
-                              <option>Rufo Encosto c/ Pingadeira</option>
-                              <option>Rufo Pingadeira Externa</option>
-                              <option>Rufo Encosto Interno</option>
-                              <option>Cumeeira Sob Medida</option>
-                            </select>
+                          {/* Visual Selectors for Rufos */}
+                          <div className="grid grid-cols-3 gap-1.5 pb-1">
+                            {[
+                              { name: 'Rufo Encosto', desc: 'Veda c/ parede', fig: '│──_ (L)', price: 33.0 },
+                              { name: 'Rufo Pingadeira', desc: 'Protege os muros', fig: '┌──┐ (U)', price: 36.0 },
+                              { name: 'Cumeeira', desc: 'Vértice telhado', fig: '╱╲ (Apex)', price: 39.0 }
+                            ].map((r) => (
+                              <button
+                                key={r.name}
+                                type="button"
+                                onClick={() => {
+                                  setSelRufoType(r.name);
+                                  setRufoPrice(r.price);
+                                }}
+                                className={`p-2 text-left border rounded-xl text-xs transition duration-200 cursor-pointer flex flex-col gap-1 relative ${
+                                  selRufoType === r.name 
+                                    ? 'border-amber-400 bg-amber-500/10 ring-1 ring-amber-400' 
+                                    : 'border-zinc-100 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:bg-zinc-50'
+                                }`}
+                              >
+                                <span className="font-bold text-zinc-800 dark:text-zinc-100 text-[10px] truncate">{r.name}</span>
+                                <span className="text-[9px] text-zinc-500 pb-0.5 truncate">{r.desc}</span>
+                                <span className="text-[9px] font-mono text-amber-600 dark:text-amber-400 bg-zinc-100 dark:bg-zinc-900 px-1 py-0.5 rounded text-center font-bold">
+                                  {r.fig}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="text-[10px] font-bold text-zinc-400">Desenvolvimento (mm)</label>
+                              <input 
+                                type="number" 
+                                value={rufoCut || ""}
+                                onChange={(e) => setRufoCut(Math.max(10, parseInt(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1 text-xs text-[#1a1a1a] dark:text-white font-bold outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-bold text-zinc-400">Comprimento (m)</label>
+                              <input 
+                                type="number" 
+                                value={rufoLen || ""}
+                                onChange={(e) => setRufoLen(Math.max(1, parseFloat(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1 text-xs text-[#1a1a1a] dark:text-white font-bold outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-bold text-zinc-400">Quant. Barras</label>
+                              <input 
+                                type="number" 
+                                value={rufoQty || 1}
+                                onChange={(e) => setRufoQty(Math.max(1, parseInt(e.target.value) || 1))}
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1 text-xs text-[#1a1a1a] dark:text-white font-bold outline-none"
+                              />
+                            </div>
                           </div>
 
                           <div className="grid grid-cols-2 gap-2">
-                            <div className="space-y-1">
-                              <label className="text-xs font-bold text-zinc-400">Corte Desenvolvimento (mm)</label>
+                            <div>
+                              <label className="text-[10px] font-bold text-zinc-400">Valor Ajustado por Metro (R$)</label>
                               <input 
                                 type="number" 
-                                value={rufoCut}
-                                onChange={(e) => setRufoCut(Math.max(10, parseInt(e.target.value) || 0))}
-                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                                value={rufoPrice || ""}
+                                onChange={(e) => setRufoPrice(Math.max(0, parseFloat(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-150 dark:border-zinc-800 rounded-lg px-2 py-1 text-xs text-emerald-500 font-bold outline-none"
                               />
                             </div>
-                            <div className="space-y-1">
-                              <label className="text-xs font-bold text-zinc-400">Comprimento (m)</label>
-                              <input 
-                                type="number" 
-                                value={rufoLen}
-                                onChange={(e) => setRufoLen(Math.max(1, parseFloat(e.target.value) || 0))}
-                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
-                              />
+                            <div className="space-y-0.5">
+                              <label className="text-[10px] font-bold text-zinc-400 uppercase">Material</label>
+                              <select 
+                                value={selRufoMat}
+                                onChange={(e) => setSelRufoMat(e.target.value)}
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-150 dark:border-zinc-800 rounded-lg px-2 py-1 text-xs font-bold text-[#1a1a1a] dark:text-white outline-none"
+                              >
+                                <option>Galvalume</option>
+                                <option>Galvanizado</option>
+                                <option>Alumínio</option>
+                                <option>Inox</option>
+                              </select>
                             </div>
                           </div>
 
                           <button 
                             onClick={addRufoToStep}
-                            className="w-full py-1.5 bg-yellow-100 text-yellow-850 border border-yellow-250 text-[10px] font-black uppercase tracking-wide rounded-lg"
+                            className="w-full py-1.5 bg-yellow-100 hover:bg-yellow-200 text-yellow-850 border border-yellow-250 text-[10px] font-black uppercase tracking-wide rounded-lg cursor-pointer transition"
                           >
-                            + Adicionar Linha de Rufo
+                            + Guardar Linha de Rufo
                           </button>
                         </div>
 
                         {/* List added features */}
                         {(wGutterItems.length > 0 || wRufoItems.length > 0) && (
                           <div className="space-y-2">
-                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block">Peças Dobradas Registradas:</span>
+                            <span className="text-[11px] font-black text-zinc-450 uppercase block">Listagem de Peças Guardadas:</span>
                             {[...wGutterItems, ...wRufoItems].map((e) => (
-                              <div key={e.id} className="p-3 bg-zinc-200/55 dark:bg-zinc-900 rounded-xl flex justify-between items-center text-xs">
+                              <div key={e.id} className="p-3 bg-zinc-100 dark:bg-zinc-900 rounded-xl flex justify-between items-center text-xs border dark:border-zinc-850">
                                 <div>
-                                  <strong className="font-extrabold">{e.desc}</strong>
+                                  <strong className="font-extrabold text-zinc-800 dark:text-zinc-100">{e.desc}</strong>
                                   <p className="text-[10px] text-zinc-500 font-bold">{e.specs}</p>
                                 </div>
-                                <span className="font-bold shrink-0">R$ {e.total.toFixed(2)}</span>
+                                <div className="flex items-center gap-3">
+                                  <span className="font-black text-emerald-600 dark:text-emerald-400">R$ {e.total.toFixed(2)}</span>
+                                  <button 
+                                    onClick={() => {
+                                      setWGutterItems(wGutterItems.filter(p => p.id !== e.id));
+                                      setWRufoItems(wRufoItems.filter(p => p.id !== e.id));
+                                    }} 
+                                    className="text-red-500 rounded p-1 hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
                               </div>
                             ))}
                           </div>
                         )}
 
                         <div className="flex gap-2">
-                          <button onClick={() => setWizardStep(2)} className="flex-1 py-3 bg-zinc-500 text-white rounded-xl font-bold text-xs">Voltar</button>
-                          <button onClick={() => setWizardStep(4)} className="flex-1 py-3 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-xl font-bold text-xs font-condensed tracking-wider">Avançar para Conexões →</button>
+                          <button onClick={() => setWizardStep(2)} className="flex-1 py-3 bg-zinc-500/10 hover:bg-zinc-500/20 text-zinc-700 dark:text-white rounded-xl font-bold text-xs cursor-pointer transition">Voltar</button>
+                          <button onClick={() => setWizardStep(4)} className="flex-1 py-3 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-xl font-black text-xs cursor-pointer transition flex items-center justify-center gap-1">
+                            <span>Conexões & Coifa/Chaminé ➡️</span>
+                          </button>
                         </div>
                       </div>
                     )}
 
-                    {/* STEP 4: DOWNPIPES (CONDUTORES), CHIMNEY FLUES,Bisnagas de PU-40 SEALANT */}
+                    {/* STEP 4: DOWNPIPES (CONDUTORES), CHIMNEY FLUES, COIFAS & SEALANT */}
                     {wizardStep === 4 && (
-                      <div className="space-y-4">
-                        <div className="space-y-0.5">
-                          <h3 className="text-base font-extrabold">Condutores e Mangueiras de Vedação</h3>
-                          <p className="text-xs text-zinc-400">Defina os condutores pluviais e bisnagas de vedação PU-40</p>
+                      <div className="space-y-5 animate-fade-in">
+                        <div className="space-y-1">
+                          <h3 className="text-base font-extrabold flex items-center gap-1.5">
+                            <span className="text-xl">⚙️</span> Conexões, Chaminés e Coifas
+                          </h3>
+                          <p className="text-xs text-zinc-400">Defina os dutos de vazão, fumaça e as colas de vedação</p>
                         </div>
 
                         {/* Condutores Pluviais retangulares */}
-                        <div className="bg-zinc-500/5 dark:bg-zinc-900/30 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-850 space-y-3">
-                          <span className="text-[11px] font-black text-amber-500 uppercase tracking-wider block">🚿 Condutores Pluviais</span>
+                        <div className="bg-white dark:bg-zinc-950 p-4.5 rounded-3xl border border-zinc-200 dark:border-zinc-850 space-y-3.5">
+                          <span className="text-xs font-black text-amber-500 uppercase tracking-wider flex items-center gap-1">🚿 1. Tubo de Descida (Condutor)</span>
+                          <p className="text-[11px] text-zinc-400 leading-tight">Canos que descem recolhendo a água da calha até o chão.</p>
                           
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-2 gap-2">
                             <div className="space-y-1">
-                              <label className="text-xs font-bold text-zinc-400">Quantidade (un)</label>
+                              <label className="text-[10px] font-bold text-zinc-400 block">Quantidade de Canos</label>
                               <input 
                                 type="number" 
-                                value={wCondQty}
+                                value={wCondQty || ""}
                                 onChange={(e) => setWCondQty(Math.max(0, parseInt(e.target.value) || 0))}
-                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-[#1a1a1a] dark:text-white font-bold outline-none"
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="text-xs font-bold text-zinc-400">Comp. Barra (m)</label>
+                              <label className="text-[10px] font-bold text-zinc-400 block">Metros por Cano</label>
                               <input 
                                 type="number" 
-                                value={wCondLen}
+                                value={wCondLen || ""}
                                 onChange={(e) => setWCondLen(Math.max(1, parseFloat(e.target.value) || 0))}
-                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-[#1a1a1a] dark:text-white font-bold outline-none"
                               />
                             </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-zinc-400 block">Preço estimado metro do Condutor (R$)</label>
+                            <input 
+                              type="number" 
+                              value={wCondPrice || ""}
+                              onChange={(e) => setWCondPrice(Math.max(0, parseFloat(e.target.value) || 0))}
+                              className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-emerald-500 font-extrabold outline-none"
+                            />
                           </div>
                         </div>
 
                         {/* Chaminés e Chapéus */}
-                        <div className="bg-zinc-500/5 dark:bg-zinc-900/30 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-850 space-y-3">
-                          <span className="text-[11px] font-black text-amber-500 uppercase tracking-wider block">🏭 Chaminés & Acessórios</span>
-                          
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="space-y-1">
-                              <label className="text-xs font-bold text-zinc-400">Quantidade (un)</label>
+                        <div className="bg-white dark:bg-zinc-950 p-4.5 rounded-3xl border border-zinc-200 dark:border-zinc-850 space-y-3.5">
+                          <span className="text-xs font-black text-amber-500 uppercase tracking-wider flex items-center gap-1">🏭 2. Chaminés e Acessórios</span>
+                          <p className="text-[11px] text-zinc-400 leading-tight">Dutos de aquecedor, lareiras ou saída de fumaça.</p>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-zinc-400 block">Escolha o Modelo de Chaminé</label>
+                            <select 
+                              value={wChamType}
+                              onChange={(e) => {
+                                setWChamType(e.target.value);
+                                if (e.target.value.includes('Lareira')) setWChamPrice(125.0);
+                                else if (e.target.value.includes('Aquecedor')) setWChamPrice(85.0);
+                                else if (e.target.value.includes('Exaustor')) setWChamPrice(190.0);
+                                else setWChamPrice(115.0);
+                              }}
+                              className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#1a1a1a] dark:text-white"
+                            >
+                              <option>Chaminé de Lareira Galvanizada</option>
+                              <option>Chapéu Chinês Tradicional</option>
+                              <option>Chaminé Aquecedor Alumínio Flexível</option>
+                              <option>Exaustor de Teto Giratório Turbina</option>
+                            </select>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="text-[10px] font-bold text-zinc-400 block">Furo/Bitola Ø</label>
+                              <select 
+                                value={wChamDiam}
+                                onChange={(e) => setWChamDiam(parseInt(e.target.value) || 150)}
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1 text-xs text-[#1a1a1a] dark:text-white font-bold outline-none"
+                              >
+                                <option value={100}>100 mm</option>
+                                <option value={150}>150 mm</option>
+                                <option value={200}>200 mm</option>
+                                <option value={250}>250 mm</option>
+                                <option value={300}>300 mm</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-bold text-zinc-400 block">Quantidade</label>
                               <input 
                                 type="number" 
                                 value={wChamQty}
                                 onChange={(e) => setWChamQty(Math.max(0, parseInt(e.target.value) || 0))}
-                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1 text-xs text-[#1a1a1a] dark:text-white font-bold outline-none"
                               />
                             </div>
-                            <div className="space-y-1">
-                              <label className="text-xs font-bold text-zinc-400">Preço Chapéu (R$)</label>
+                            <div>
+                              <label className="text-[10px] font-bold text-zinc-400 block">Material</label>
+                              <select 
+                                value={wChamMaterial}
+                                onChange={(e) => setWChamMaterial(e.target.value)}
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2 py-1 text-xs text-[#1a1a1a] dark:text-white font-bold outline-none"
+                              >
+                                <option>Galvanizado</option>
+                                <option>Alumínio</option>
+                                <option>Inox</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-zinc-400 block">Preço unitário Chaminé (R$)</label>
+                            <input 
+                              type="number" 
+                              value={wChamPrice || ""}
+                              onChange={(e) => setWChamPrice(Math.max(0, parseFloat(e.target.value) || 0))}
+                              className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-emerald-500 font-extrabold outline-none"
+                            />
+                          </div>
+
+                          {wChamQty > 0 && (
+                            <div className="p-2 bg-amber-50 dark:bg-amber-950/20 text-amber-850 dark:text-amber-400 rounded-xl text-center text-[10px] font-black">
+                              🏭 Somando {wChamQty}x Chaminé no orçamento: R$ {(wChamQty * wChamPrice).toFixed(2)}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Coifas de churrasqueira (Newly added specifically for user request and visual details) */}
+                        <div className="bg-[#fffbeb] dark:bg-amber-950/20 p-4.5 rounded-3xl border border-amber-200 dark:border-amber-900/60 space-y-3.5">
+                          <span className="text-xs font-black text-amber-700 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1">🥩🔥 3. Coifas Gourmet / Cozinha</span>
+                          <p className="text-[11px] text-amber-900/80 dark:text-amber-300 leading-tight">Escolha e inclua a coifa de exaustão com preenchimento visual simplificado.</p>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-0.5">
+                              <label className="text-[10px] font-black text-amber-900 dark:text-amber-300 block">Tipo de Coifa</label>
+                              <select 
+                                value={wCoifaType}
+                                onChange={(e) => {
+                                  setWCoifaType(e.target.value);
+                                  if (e.target.value.includes('Inox')) setWCoifaPrice(890.0);
+                                  else if (e.target.value.includes('Pintada')) setWCoifaPrice(670.0);
+                                  else setWCoifaPrice(480.0);
+                                }}
+                                className="w-full bg-white dark:bg-zinc-900 border border-amber-200 dark:border-zinc-850 rounded-lg px-2 py-1 text-xs font-bold text-[#1a1a1a] dark:text-white outline-none"
+                              >
+                                <option>Coifa de Churrasqueira</option>
+                                <option>Coifa de Cozinha Parede</option>
+                                <option>Coifa Industrial Exaustor</option>
+                              </select>
+                            </div>
+                            <div className="space-y-0.5">
+                              <label className="text-[10px] font-black text-amber-900 dark:text-amber-300 block">Largura da Coifa</label>
+                              <select 
+                                value={wCoifaSize}
+                                onChange={(e) => setWCoifaSize(e.target.value)}
+                                className="w-full bg-white dark:bg-zinc-900 border border-amber-200 dark:border-zinc-850 rounded-lg px-2 py-1 text-xs font-bold text-[#1a1a1a] dark:text-white outline-none"
+                              >
+                                <option>60 cm</option>
+                                <option>80 cm</option>
+                                <option>90 cm</option>
+                                <option>100 cm</option>
+                                <option>120 cm</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="text-[10px] font-black text-amber-900 dark:text-amber-300 block">Quantidade</label>
                               <input 
                                 type="number" 
-                                value={wChamPrice}
-                                onChange={(e) => setWChamPrice(Math.max(0, parseFloat(e.target.value) || 0))}
-                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                                value={wCoifaQty}
+                                onChange={(e) => setWCoifaQty(Math.max(0, parseInt(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border border-amber-150 dark:border-zinc-800 rounded-lg px-2 py-1 text-xs font-bold text-[#1a1a1a] dark:text-white outline-none"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-black text-amber-900 dark:text-amber-300 block">Material</label>
+                              <select 
+                                value={wCoifaMaterial}
+                                onChange={(e) => setWCoifaMaterial(e.target.value)}
+                                className="w-full bg-white dark:bg-zinc-900 border border-amber-150 dark:border-zinc-800 rounded-lg px-2 py-1 text-xs font-bold text-[#1a1a1a] dark:text-white outline-none"
+                              >
+                                <option>Galvanizado</option>
+                                <option>Inox Escovado</option>
+                                <option>Pintura Preta</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-black text-amber-900 dark:text-amber-300 block">Preço Unitário</label>
+                              <input 
+                                type="number" 
+                                value={wCoifaPrice || ""}
+                                onChange={(e) => setWCoifaPrice(Math.max(0, parseFloat(e.target.value) || 0))}
+                                className="w-full bg-white dark:bg-zinc-900 border border-amber-150 dark:border-zinc-800 rounded-lg px-2 py-1 text-xs font-black text-emerald-600 dark:text-emerald-400 outline-none"
                               />
                             </div>
                           </div>
+
+                          {wCoifaQty > 0 ? (
+                            <div className="p-2.5 bg-emerald-100 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-400 border border-emerald-250 dark:border-emerald-900 rounded-xl text-center text-xs font-black animate-pulse">
+                              🔥 Somando {wCoifaQty}x {wCoifaType} ao total: R$ {(wCoifaQty * wCoifaPrice).toFixed(2)}
+                            </div>
+                          ) : (
+                            <div className="text-[10px] text-amber-800/80 dark:text-amber-400 font-bold text-center">
+                              (Deixe em 0 se o cliente não quiser colocar Coifa nesta obra)
+                            </div>
+                          )}
                         </div>
 
                         {/* PU-40 Bisnaga counts */}
-                        <div className="bg-zinc-500/5 dark:bg-zinc-900/30 p-4 rounded-2xl border border-zinc-200 dark:border-zinc-850 space-y-3">
-                          <span className="text-[11px] font-black text-amber-500 uppercase tracking-wider block">🧪 Selante bisnaga PU-40 (400g)</span>
+                        <div className="bg-white dark:bg-zinc-950 p-4.5 rounded-3xl border border-zinc-200 dark:border-zinc-850 space-y-3">
+                          <span className="text-xs font-black text-amber-500 uppercase tracking-wider flex items-center gap-1">🧪 4. Silicone de Emenda de Calha (PU-40)</span>
+                          <p className="text-[11px] text-zinc-400 leading-tight">Veda e impede goteiras nas juntas e rebites de montagem.</p>
                           
                           <div className="grid grid-cols-2 gap-2">
                             <div className="space-y-1">
-                              <label className="text-xs font-bold text-zinc-400">Bisnagas Recomendadas</label>
+                              <label className="text-[10px] font-bold text-zinc-400 block">Tubos recomendados</label>
                               <input 
                                 type="number" 
-                                value={puQty}
+                                value={puQty || ""}
                                 onChange={(e) => setPuQty(Math.max(0, parseInt(e.target.value) || 0))}
-                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white font-bold"
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-250 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-[#1a1a1a] dark:text-white font-extrabold outline-none"
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="text-xs font-bold text-zinc-400">Valor Unitário (R$)</label>
+                              <label className="text-[10px] font-bold text-zinc-400 block">Preço por Tubo (R$)</label>
                               <input 
                                 type="number" 
-                                value={puPrice}
+                                value={puPrice || ""}
                                 onChange={(e) => setPuPrice(Math.max(0, parseFloat(e.target.value) || 0))}
-                                className="w-full bg-white dark:bg-zinc-900 border rounded-xl px-3 py-1.5 text-xs text-[#1a1a1a] dark:text-white"
+                                className="w-full bg-white dark:bg-zinc-900 border border-zinc-250 dark:border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-[#1a1a1a] dark:text-white outline-none"
                               />
                             </div>
                           </div>
                         </div>
 
                         <div className="flex gap-2">
-                          <button onClick={() => setWizardStep(3)} className="flex-1 py-3 bg-zinc-500 text-white rounded-xl font-bold text-xs">Voltar</button>
-                          <button onClick={() => setWizardStep(5)} className="flex-1 py-3 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-xl font-bold text-xs font-condensed tracking-wider">Avançar para Resumo →</button>
+                          <button onClick={() => setWizardStep(3)} className="flex-1 py-3 bg-zinc-500/10 hover:bg-zinc-500/20 text-zinc-700 dark:text-white rounded-xl font-bold text-xs cursor-pointer transition">Voltar</button>
+                          <button onClick={() => setWizardStep(5)} className="flex-1 py-3 bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-xl font-black text-xs cursor-pointer transition flex items-center justify-center gap-1">
+                            <span>Avançar para o Resumo total 💵</span>
+                          </button>
                         </div>
                       </div>
                     )}
