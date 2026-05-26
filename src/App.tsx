@@ -244,7 +244,7 @@ export default function App() {
     };
 
     try {
-      const clientRef = ref(db, `clients/${user.uid}/${payload.id}`);
+      const clientRef = ref(db, `companies/${user.uid}/clients/${payload.id}`);
       await set(clientRef, payload);
       alert(cEditingId ? "Cliente atualizado com sucesso!" : "Cliente cadastrado com sucesso! 🎉");
       
@@ -253,9 +253,9 @@ export default function App() {
       setCPhone("");
       setCAddress("");
       setCEditingId(null);
-    } catch (err) {
-      console.error(err);
-      alert("Falha ao salvar cliente na nuvem.");
+    } catch (err: any) {
+      console.error("Erro ao salvar cliente:", err);
+      alert(`Falha ao salvar cliente na nuvem: ${err?.message || err}`);
     }
   };
 
@@ -270,11 +270,12 @@ export default function App() {
     if (!user) return;
     if (!confirm("Confirmar a exclusão permanente deste cliente? Isso não apagará os orçamentos existentes do mesmo.")) return;
     try {
-      const clientRef = ref(db, `clients/${user.uid}/${clientId}`);
+      const clientRef = ref(db, `companies/${user.uid}/clients/${clientId}`);
       await remove(clientRef);
       alert("Cliente excluído.");
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("Erro ao deletar cliente:", err);
+      alert(`Falha ao excluir cliente: ${err?.message || err}`);
     }
   };
 
@@ -337,7 +338,7 @@ export default function App() {
     });
 
     // Sync Clients
-    const clientsRef = ref(db, `clients/${user.uid}`);
+    const clientsRef = ref(db, `companies/${user.uid}/clients`);
     const unsubClients = onValue(clientsRef, (snapshot) => {
       const arr: any[] = [];
       if (snapshot.exists()) {
@@ -909,7 +910,7 @@ export default function App() {
         createdAt: new Date().toISOString()
       };
       try {
-        const clientRef = ref(db, `clients/${user.uid}/${newClientId}`);
+        const clientRef = ref(db, `companies/${user.uid}/clients/${newClientId}`);
         await set(clientRef, clientPayload);
       } catch (err) {
         console.error("Erro ao auto-cadastrar cliente:", err);
