@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Search, Calendar, CreditCard, Printer, Trash2, Edit3, DollarSign } from 'lucide-react';
+import { Search, Calendar, CreditCard, Printer, Trash2, Edit3, DollarSign, Send } from 'lucide-react';
 
 interface CalhaZapHistoryProps {
   quotes: any[];
@@ -9,6 +9,7 @@ interface CalhaZapHistoryProps {
   onDeleteQuote: (id: string) => void;
   onEditLoad: (quote: any) => void;
   onPrintQuote: (quote: any) => void;
+  companyName?: string;
 }
 
 export default function CalhaZapHistory({
@@ -16,9 +17,87 @@ export default function CalhaZapHistory({
   onToggleStatus,
   onDeleteQuote,
   onEditLoad,
-  onPrintQuote
+  onPrintQuote,
+  companyName = "Oficina de Calhas"
 }: CalhaZapHistoryProps) {
   const [search, setSearch] = useState('');
+
+  const formatQuoteWhatsApp = (q: any, company: string) => {
+    let text = `*📄 PROPOSTA COMERCIAL: ${q.id}*\n`;
+    text += `*${company}*\n`;
+    text += `-------------------------------------------\n`;
+    text += `*Cliente:* ${q.customerName || 'Não Informado'}\n`;
+    text += `*Data:* ${q.date || ''}\n`;
+    if (q.customerAddress) {
+      text += `*Endereço:* ${q.customerAddress}\n`;
+    }
+    text += `-------------------------------------------\n`;
+    text += `*DETALHES DA SOLICITAÇÃO:*\n`;
+
+    if (q.telhas && q.telhas.length > 0) {
+      q.telhas.forEach((it: any) => {
+        text += `🔹 telha ${it.type || ''} (${it.material || ''}) - Qtd: ${it.qty || 1}un | R$ ${it.total?.toFixed(2)}\n`;
+      });
+    }
+    if (q.calhas && q.calhas.length > 0) {
+      q.calhas.forEach((it: any) => {
+        text += `🔹 calha ${it.type || ''} (Corte ${it.cut || 280}mm | Esp ${it.thick || '0,43'}mm) - Comprim: ${it.len || 0}m | Qtd: ${it.qty || 1}un | R$ ${it.total?.toFixed(2)}\n`;
+      });
+    }
+    if (q.rufos && q.rufos.length > 0) {
+      q.rufos.forEach((it: any) => {
+        text += `🔹 rufo ${it.type || ''} (Corte ${it.cut || 250}mm | Esp ${it.thick || '0,43'}mm) - Comprim: ${it.len || 0}m | Qtd: ${it.qty || 1}un | R$ ${it.total?.toFixed(2)}\n`;
+      });
+    }
+    if (q.condutores && q.condutores.qtd > 0) {
+      text += `🔹 condutor ${q.condutores.desc || ''} - Qtd: ${q.condutores.qtd || 1}un | R$ ${q.condutores.total?.toFixed(2)}\n`;
+    }
+    if (q.chamines && q.chamines.length > 0) {
+      q.chamines.forEach((it: any) => {
+        if (it.qtd > 0) {
+          text += `🔹 chaminé ${it.desc || ''} (${it.specs || ''}) - Qtd: ${it.qtd}un | R$ ${it.total?.toFixed(2)}\n`;
+        }
+      });
+    }
+    if (q.coifas && q.coifas.length > 0) {
+      q.coifas.forEach((it: any) => {
+        if (it.qtd > 0) {
+          text += `🔹 coifa ${it.desc || ''} (${it.specs || ''}) - Qtd: ${it.qtd}un | R$ ${it.total?.toFixed(2)}\n`;
+        }
+      });
+    }
+    if (q.puQty > 0) {
+      text += `🔹 vedação PU-40 Bisnagas - Qtd: ${q.puQty}un | R$ ${(q.puQty * q.puPrice)?.toFixed(2)}\n`;
+    }
+    if (q.laborPrice > 0) {
+      text += `⚙️ Mão de Obra / Serviço Técnico: R$ ${q.laborPrice?.toFixed(2)}\n`;
+    }
+
+    text += `-------------------------------------------\n`;
+    text += `*SUBTOTAL:* R$ ${q.subtotal?.toFixed(2)}\n`;
+    if (q.discountPercent > 0) {
+      text += `*DESCONTO (${q.discountPercent}%):* -R$ ${q.discountAmount?.toFixed(2)}\n`;
+    }
+    text += `*💰 TOTAL DA PROPOSTA:* R$ ${q.total?.toFixed(2)}\n`;
+    if (q.notes) {
+      text += `\n*Garantia / Observações:* ${q.notes}\n`;
+    }
+    text += `-------------------------------------------\n`;
+    text += `_Aguardamos sua aprovação para iniciar a fabricação!_`;
+    return text;
+  };
+
+  const getWhatsAppUrl = (phone: string, text: string) => {
+    let cleanPhone = (phone || '').replace(/\D/g, '');
+    if (cleanPhone.length > 0) {
+      if (cleanPhone.length === 10 || cleanPhone.length === 11) {
+        if (!cleanPhone.startsWith('55')) {
+          cleanPhone = '55' + cleanPhone;
+        }
+      }
+    }
+    return `https://api.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
+  };
 
   const filteredQuotes = quotes.filter(q => {
     return (
@@ -91,6 +170,17 @@ export default function CalhaZapHistory({
 
                 <div className="flex sm:flex-col gap-2 justify-end font-bold text-xs shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-[#b0b2b5] dark:border-zinc-800">
                   <div className="flex gap-2">
+                    <a
+                      href={getWhatsAppUrl(q.customerPhone, formatQuoteWhatsApp(q, companyName))}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 sm:flex-none p-2 bg-emerald-500 text-white hover:bg-emerald-600 rounded-lg transition text-[10px] flex items-center justify-center gap-1 cursor-pointer font-bold"
+                      title="Enviar orçamento direto para o WhatsApp do cliente"
+                    >
+                      <Send className="w-3.5 h-3.5 shrink-0" />
+                      <span>WhatsApp</span>
+                    </a>
+
                     <button
                       onClick={() => onPrintQuote(q)}
                       className="flex-1 sm:flex-none p-2 bg-white dark:bg-zinc-800 border border-[#b0b2b5] dark:border-zinc-700 text-[#5a5c5f] dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition text-[10px] flex items-center justify-center gap-1 hover:text-black dark:hover:text-white cursor-pointer"

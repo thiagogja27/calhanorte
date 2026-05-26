@@ -211,7 +211,75 @@ export default function App() {
   };
 
   // -------------------------------------------------------------
-  // SYNC AUTH, COMPANY AND QUOTES FROM FIREBASE DATABASE
+  // CLIENTS & SALES CRM DASHBOARD SUB-SYSTEM STATES
+  // -------------------------------------------------------------
+  const [clients, setClients] = useState<any[]>([]);
+  const [homeSubTab, setHomeSubTab] = useState<'geral' | 'dashboard' | 'clientes'>('geral');
+  
+  // Client Form inputs
+  const [cName, setCName] = useState("");
+  const [cPhone, setCPhone] = useState("");
+  const [cAddress, setCAddress] = useState("");
+  const [cEditingId, setCEditingId] = useState<string | null>(null);
+
+  // Wizard autocomplete support
+  const [wizardClientSearch, setWizardClientSearch] = useState("");
+  const [showWizardClientDropdown, setShowWizardClientDropdown] = useState(false);
+
+  // Client Data Actions
+  const handleSaveClient = async (e: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!user) return;
+    if (!cName.trim()) {
+      alert("Por favor, preencha o nome do cliente.");
+      return;
+    }
+
+    const payload = {
+      id: cEditingId || "CLI-" + Math.floor(10000 + Math.random() * 90000).toString(),
+      name: cName,
+      phone: cPhone,
+      address: cAddress,
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      const clientRef = ref(db, `clients/${user.uid}/${payload.id}`);
+      await set(clientRef, payload);
+      alert(cEditingId ? "Cliente atualizado com sucesso!" : "Cliente cadastrado com sucesso! 🎉");
+      
+      // Reset form
+      setCName("");
+      setCPhone("");
+      setCAddress("");
+      setCEditingId(null);
+    } catch (err) {
+      console.error(err);
+      alert("Falha ao salvar cliente na nuvem.");
+    }
+  };
+
+  const handleEditClientStart = (cli: any) => {
+    setCName(cli.name || "");
+    setCPhone(cli.phone || "");
+    setCAddress(cli.address || "");
+    setCEditingId(cli.id);
+  };
+
+  const handleDeleteClient = async (clientId: string) => {
+    if (!user) return;
+    if (!confirm("Confirmar a exclusão permanente deste cliente? Isso não apagará os orçamentos existentes do mesmo.")) return;
+    try {
+      const clientRef = ref(db, `clients/${user.uid}/${clientId}`);
+      await remove(clientRef);
+      alert("Cliente excluído.");
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // SYNC AUTH, COMPANY, QUOTES AND CLIENTS FROM FIREBASE DATABASE
   // -------------------------------------------------------------
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -238,6 +306,7 @@ export default function App() {
   useEffect(() => {
     if (!user) {
       setQuotes([]);
+      setClients([]);
       return;
     }
 
@@ -267,6 +336,18 @@ export default function App() {
       setQuotes(arr.reverse()); // Put newest first
     });
 
+    // Sync Clients
+    const clientsRef = ref(db, `clients/${user.uid}`);
+    const unsubClients = onValue(clientsRef, (snapshot) => {
+      const arr: any[] = [];
+      if (snapshot.exists()) {
+        snapshot.forEach((child) => {
+          arr.push(child.val());
+        });
+      }
+      setClients(arr);
+    });
+
     try {
       const ok = localStorage.getItem('cz_ativo') === '1';
       setCzAtivo(ok);
@@ -275,6 +356,7 @@ export default function App() {
     return () => {
       unsubCompany();
       unsubQuotes();
+      unsubClients();
     };
   }, [user]);
 
@@ -340,6 +422,153 @@ export default function App() {
     } catch (_) {}
     setShowLock(false);
     alert("Pronto! Recursos Premium Ativados com Sucesso! Aproveite.");
+  };
+
+  // -------------------------------------------------------------
+  // CRM SALES INTELLIGENCE & PREDICTIVE ANALYTICS ENGINE
+  // -------------------------------------------------------------
+  const getClientSalesIntelligence = () => {
+    // Group records by unique name/lowercase key
+    const clientMap: { [key: string]: { name: string; phone: string; address: string; quotes: any[] } } = {};
+
+    // Seed from registered clients list
+    clients.forEach(c => {
+      const key = (c.name || '').trim().toLowerCase();
+      if (key) {
+        clientMap[key] = {
+          name: c.name,
+          phone: c.phone || '',
+          address: c.address || '',
+          quotes: []
+        };
+      }
+    });
+
+    // Add quotes historic logs
+    quotes.forEach(q => {
+      const key = (q.customerName || '').trim().toLowerCase();
+      if (key) {
+        if (!clientMap[key]) {
+          clientMap[key] = {
+            name: q.customerName,
+            phone: q.customerPhone || '',
+            address: q.customerAddress || '',
+            quotes: []
+          };
+        }
+        clientMap[key].quotes.push(q);
+      }
+    });
+
+    // Analyze individual client buying interval and generate predictions
+    return Object.values(clientMap).map(c => {
+      // Sort quotes chronological (oldest to newest)
+      const parseDateStr = (dateStr: string) => {
+        if (!dateStr) return 0;
+        const [d, m, y] = dateStr.split('/').map(Number);
+        return new Date(y, m - 1, d).getTime();
+      };
+      
+      const sortedQuotes = [...c.quotes].sort((a, b) => parseDateStr(a.date) - parseDateStr(b.date));
+      const totalSpent = c.quotes.reduce((acc, q) => acc + (q.total || 0), 0);
+      const ordersCount = c.quotes.length;
+
+      // Predictive values
+      let avgIntervalDays = 45; // default industrial standard cycle
+      let predictedNextDate: Date | null = null;
+      let daysUntilPredicted = 0;
+      let predictionStatus: 'ok' | 'due' | 'past_due' | 'new' = 'new';
+      let purchaseFrequencyDesc = "Apenas 1 pedido";
+
+      const parseDateObj = (dateStr: string) => {
+        if (!dateStr) return new Date();
+        const [d, m, y] = dateStr.split('/').map(Number);
+        return new Date(y, m - 1, d);
+      };
+
+      if (sortedQuotes.length >= 2) {
+        let totalInterval = 0;
+        for (let i = 1; i < sortedQuotes.length; i++) {
+          const d1 = parseDateObj(sortedQuotes[i - 1].date);
+          const d2 = parseDateObj(sortedQuotes[i].date);
+          const diffMs = Math.abs(d2.getTime() - d1.getTime());
+          totalInterval += Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        }
+        avgIntervalDays = Math.round(totalInterval / (sortedQuotes.length - 1)) || 30; // default to 30 if 0
+        purchaseFrequencyDesc = `A cada ${avgIntervalDays} dias`;
+
+        const lastOrderDate = parseDateObj(sortedQuotes[sortedQuotes.length - 1].date);
+        predictedNextDate = new Date(lastOrderDate.getTime());
+        predictedNextDate.setDate(predictedNextDate.getDate() + avgIntervalDays);
+
+        const today = new Date();
+        const diffMs = predictedNextDate.getTime() - today.getTime();
+        daysUntilPredicted = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+        if (daysUntilPredicted < -15) {
+          predictionStatus = 'past_due';
+        } else if (daysUntilPredicted <= 5) {
+          predictionStatus = 'due';
+        } else {
+          predictionStatus = 'ok';
+        }
+      } else if (sortedQuotes.length === 1) {
+        avgIntervalDays = 45;
+        purchaseFrequencyDesc = "Primeiro Pedido";
+        const lastOrderDate = parseDateObj(sortedQuotes[0].date);
+        predictedNextDate = new Date(lastOrderDate.getTime());
+        predictedNextDate.setDate(predictedNextDate.getDate() + 45); // estimate next on 45 days
+
+        const today = new Date();
+        const diffMs = predictedNextDate.getTime() - today.getTime();
+        daysUntilPredicted = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        if (daysUntilPredicted <= 5) {
+          predictionStatus = 'due';
+        } else {
+          predictionStatus = 'ok';
+        }
+      }
+
+      return {
+        ...c,
+        totalSpent,
+        ordersCount,
+        avgIntervalDays,
+        purchaseFrequencyDesc,
+        predictedNextDate,
+        daysUntilPredicted,
+        predictionStatus
+      };
+    });
+  };
+
+  const getProductFrequencies = () => {
+    let calhasFreq = 0;
+    let rufosFreq = 0;
+    let telhasFreq = 0;
+    let condutoresFreq = 0;
+    let chaminesFreq = 0;
+    let coifasFreq = 0;
+
+    quotes.forEach(q => {
+      if (q.calhas) calhasFreq += q.calhas.length;
+      if (q.rufos) rufosFreq += q.rufos.length;
+      if (q.telhas) telhasFreq += q.telhas.length;
+      if (q.condutores && q.condutores.qtd > 0) condutoresFreq += Number(q.condutores.qtd);
+      if (q.chamines) q.chamines.forEach((it: any) => { if (it.qtd > 0) chaminesFreq += Number(it.qtd) });
+      if (q.coifas) q.coifas.forEach((it: any) => { if (it.qtd > 0) coifasFreq += Number(it.qtd) });
+    });
+
+    const totalItems = (calhasFreq + rufosFreq + telhasFreq + condutoresFreq + chaminesFreq + coifasFreq) || 1;
+
+    return [
+      { name: 'Calhas', count: calhasFreq, pct: (calhasFreq / totalItems) * 100, color: 'bg-emerald-500' },
+      { name: 'Rufos', count: rufosFreq, pct: (rufosFreq / totalItems) * 100, color: 'bg-indigo-500' },
+      { name: 'Telhas', count: telhasFreq, pct: (telhasFreq / totalItems) * 100, color: 'bg-amber-500' },
+      { name: 'Condutores', count: condutoresFreq, pct: (condutoresFreq / totalItems) * 100, color: 'bg-pink-500' },
+      { name: 'Chaminés', count: chaminesFreq, pct: (chaminesFreq / totalItems) * 100, color: 'bg-[#06b6d4]' }, // sky/teal-ish
+      { name: 'Coifas', count: coifasFreq, pct: (coifasFreq / totalItems) * 100, color: 'bg-teal-500' },
+    ].sort((a, b) => b.count - a.count);
   };
 
   // Data Actions
@@ -845,200 +1074,550 @@ export default function App() {
               {/* VIEWPORT CONTROLLER SWITCHBOARD */}
               <div className="flex-grow overflow-y-auto p-4 pb-6 no-scrollbar">
 
-                {/* TAB 1: Dashboard Home Tab */}
                 {viewportTab === 'home' && (
                   <div className="space-y-4 animate-fade-in">
                     
                     {/* Top Calendary Greeting metadata */}
                     <div className="space-y-0.5">
                       <span className="text-[11px] font-bold text-zinc-400 tracking-wide uppercase">
-                        Quarta-feira, 24 de maio
+                        {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
                       </span>
                       <h3 className="text-xl font-extrabold tracking-tight">
-                        O que vamos fazer hoje?
+                        CRM & Clientes CalhaZap
                       </h3>
                     </div>
 
-                    {/* Novo Orçamento Mega Banner Gradient Card */}
-                    <div 
-                      onClick={() => {
-                        setWizardStep(1);
-                        setViewportTab('orc');
-                      }}
-                      className="cursor-pointer bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 p-4 rounded-3xl text-zinc-950 flex justify-between items-center shadow-lg shadow-amber-500/15 relative overflow-hidden group select-none transition-all border border-amber-300/20 active:scale-98"
-                    >
-                      <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:scale-125 transition-all"></div>
+                    {/* Sub-tab Navigation Bar */}
+                    <div className="flex bg-zinc-150 dark:bg-zinc-900 p-1.5 rounded-2xl border border-zinc-200 dark:border-zinc-800 gap-1 select-none">
+                      <button 
+                        onClick={() => setHomeSubTab('geral')}
+                        className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition cursor-pointer ${
+                          homeSubTab === 'geral' 
+                            ? 'bg-amber-400 text-slate-950 shadow-sm' 
+                            : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'
+                        }`}
+                      >
+                        🏠 Geral
+                      </button>
                       
-                      <div className="flex items-center gap-3.5 z-10">
-                        <div className="w-11 h-11 bg-white/25 rounded-2xl flex items-center justify-center shadow-inner">
-                          <Plus className="w-5.5 h-5.5 stroke-[3.5] text-zinc-950" />
-                        </div>
-                        <div>
-                          <h4 className="font-black text-[15px] leading-snug tracking-tight">Novo Orçamento</h4>
-                          <p className="text-[10px] font-bold text-zinc-900/80">Crie um orçamento em 2 minutos</p>
-                        </div>
-                      </div>
-
-                      <ChevronRight className="w-5 h-5 text-zinc-950 group-hover:translate-x-1 transition-transform" />
+                      <button 
+                        onClick={() => setHomeSubTab('dashboard')}
+                        className={`flex-1 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition cursor-pointer ${
+                          homeSubTab === 'dashboard' 
+                            ? 'bg-amber-400 text-slate-950 shadow-sm' 
+                            : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'
+                        }`}
+                      >
+                        📈 Vendas & CRM
+                      </button>
+                      
+                      <button 
+                        onClick={() => setHomeSubTab('clientes')}
+                        className={`flex-1 py-1 px-1.5 text-[10px] font-black uppercase tracking-wider rounded-xl transition cursor-pointer leading-tight ${
+                          homeSubTab === 'clientes' 
+                            ? 'bg-amber-400 text-slate-950 shadow-sm' 
+                            : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-800'
+                        }`}
+                      >
+                        👤 Cadastrar Clientes
+                      </button>
                     </div>
 
-                    {/* Rounded Action Column Chips Grid */}
-                    <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold font-condensed">
-                      <div 
-                        onClick={() => setViewportTab('hist')}
-                        className={`p-3 rounded-2xl flex flex-col items-center justify-center gap-1 cursor-pointer transition active:scale-95 border ${
-                          darkMode ? 'bg-zinc-900 hover:bg-zinc-850 border-zinc-800' : 'bg-white hover:bg-zinc-50 border-zinc-200'
-                        }`}
-                      >
-                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
-                          <Wrench className="w-4 h-4" />
-                        </div>
-                        <span className="text-[11px] tracking-wider uppercase">Obras</span>
-                      </div>
-
-                      <div 
-                        onClick={() => {
-                          setWizardStep(1);
-                          setViewportTab('orc');
-                        }}
-                        className={`p-3 rounded-2xl flex flex-col items-center justify-center gap-1 cursor-pointer transition active:scale-95 border ${
-                          darkMode ? 'bg-zinc-900 hover:bg-zinc-850 border-zinc-800' : 'bg-white hover:bg-zinc-50 border-zinc-200'
-                        }`}
-                      >
-                        <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
-                          <Users className="w-4 h-4" />
-                        </div>
-                        <span className="text-[11px] tracking-wider uppercase">Clientes</span>
-                      </div>
-
-                      <div 
-                        onClick={() => setViewportTab('emp')}
-                        className={`p-3 rounded-2xl flex flex-col items-center justify-center gap-1 cursor-pointer transition active:scale-95 border ${
-                          darkMode ? 'bg-zinc-900 hover:bg-zinc-850 border-zinc-800' : 'bg-white hover:bg-zinc-50 border-zinc-200'
-                        }`}
-                      >
-                        <div className="w-8 h-8 rounded-full bg-stone-100 text-stone-600 flex items-center justify-center">
-                          <Menu className="w-4 h-4" />
-                        </div>
-                        <span className="text-[11px] tracking-wider uppercase">Mais</span>
-                      </div>
-                    </div>
-
-                    {/* Section: "Para Hoje" Scheduled list */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center font-bold">
-                        <span className="text-xs uppercase tracking-wider text-zinc-500">Instalações & Visitas</span>
-                        <button onClick={() => setViewportTab('hist')} className="text-xs text-amber-500 cursor-pointer">Ver Todos</button>
-                      </div>
-
-                      <div className="space-y-2">
-                        {quotes.filter(q => q.status === 'pendente' || q.status === 'aprovado').length === 0 ? (
-                          <div className={`p-4 text-center rounded-2xl border border-dashed text-xs text-zinc-400 font-bold ${
-                            darkMode ? 'border-zinc-800 bg-zinc-950/40' : 'border-zinc-200 bg-zinc-50/50'
-                          }`}>
-                            Crie ou salve um orçamento para gerenciar instalações ativas aqui.
+                    {/* 1. VISÃO GERAL TAB */}
+                    {homeSubTab === 'geral' && (
+                      <div className="space-y-4 animate-fade-in">
+                        {/* Novo Orçamento Mega Banner Gradient Card */}
+                        <div 
+                          onClick={() => {
+                            setWizardStep(1);
+                            setViewportTab('orc');
+                          }}
+                          className="cursor-pointer bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 p-4 rounded-3xl text-zinc-950 flex justify-between items-center shadow-lg shadow-amber-500/15 relative overflow-hidden group select-none transition-all border border-amber-300/20 active:scale-98"
+                        >
+                          <div className="absolute right-[-10px] top-[-10px] w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:scale-125 transition-all"></div>
+                          
+                          <div className="flex items-center gap-3.5 z-10">
+                            <div className="w-11 h-11 bg-white/25 rounded-2xl flex items-center justify-center shadow-inner">
+                              <Plus className="w-5.5 h-5.5 stroke-[3.5] text-zinc-950" />
+                            </div>
+                            <div>
+                              <h4 className="font-black text-[15px] leading-snug tracking-tight">Novo Orçamento</h4>
+                              <p className="text-[10px] font-bold text-zinc-900/80">Crie um orçamento em 2 minutos</p>
+                            </div>
                           </div>
-                        ) : (
-                          quotes.filter(q => q.status === 'pendente' || q.status === 'aprovado').slice(0, 2).map((q) => (
-                            <div 
-                              key={q.id}
-                              className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
-                                darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
-                              }`}
-                            >
-                              <div className="flex items-center gap-3 truncate">
-                                <span className={`px-2 py-1 rounded-xl text-[9px] font-black shrink-0 ${
-                                  q.status === 'aprovado' ? 'bg-emerald-100 text-emerald-850' : 'bg-amber-100 text-amber-850'
-                                }`}>
-                                  {q.date?.slice(0, 5) || 'Hoje'}
-                                </span>
-                                <div className="truncate">
-                                  <h5 className="text-xs font-bold truncate">{q.customerName}</h5>
-                                  <p className="text-[10px] text-zinc-500 truncate">{q.customerAddress || 'Oficina / Balcão'}</p>
+
+                          <ChevronRight className="w-5 h-5 text-zinc-950 group-hover:translate-x-1 transition-transform" />
+                        </div>
+
+                        {/* Rounded Action Column Chips Grid */}
+                        <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold font-condensed">
+                          <div 
+                            onClick={() => setViewportTab('hist')}
+                            className={`p-3 rounded-2xl flex flex-col items-center justify-center gap-1 cursor-pointer transition active:scale-95 border ${
+                              darkMode ? 'bg-zinc-900 hover:bg-zinc-850 border-zinc-800' : 'bg-white hover:bg-zinc-50 border-zinc-200'
+                            }`}
+                          >
+                            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
+                              <Wrench className="w-4 h-4" />
+                            </div>
+                            <span className="text-[11px] tracking-wider uppercase">Obras</span>
+                          </div>
+
+                          <div 
+                            onClick={() => {
+                              setHomeSubTab('clientes');
+                            }}
+                            className={`p-3 rounded-2xl flex flex-col items-center justify-center gap-1 cursor-pointer transition active:scale-95 border ${
+                              darkMode ? 'bg-zinc-900 hover:bg-zinc-850 border-zinc-800' : 'bg-white hover:bg-zinc-50 border-zinc-200'
+                            }`}
+                          >
+                            <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center">
+                              <Users className="w-4 h-4" />
+                            </div>
+                            <span className="text-[11px] tracking-wider uppercase">Clientes</span>
+                          </div>
+
+                          <div 
+                            onClick={() => setViewportTab('emp')}
+                            className={`p-3 rounded-2xl flex flex-col items-center justify-center gap-1 cursor-pointer transition active:scale-95 border ${
+                              darkMode ? 'bg-zinc-900 hover:bg-zinc-850 border-zinc-800' : 'bg-white hover:bg-zinc-50 border-zinc-200'
+                            }`}
+                          >
+                            <div className="w-8 h-8 rounded-full bg-stone-100 text-stone-600 flex items-center justify-center">
+                              <Menu className="w-4 h-4" />
+                            </div>
+                            <span className="text-[11px] tracking-wider uppercase">Mais</span>
+                          </div>
+                        </div>
+
+                        {/* Section: "Para Hoje" Scheduled list */}
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center font-bold">
+                            <span className="text-xs uppercase tracking-wider text-zinc-500">Instalações & Visitas</span>
+                            <button onClick={() => setViewportTab('hist')} className="text-xs text-amber-500 cursor-pointer">Ver Todos</button>
+                          </div>
+
+                          <div className="space-y-2">
+                            {quotes.filter(q => q.status === 'pendente' || q.status === 'aprovado').length === 0 ? (
+                              <div className={`p-4 text-center rounded-2xl border border-dashed text-xs text-zinc-400 font-bold ${
+                                darkMode ? 'border-zinc-800 bg-zinc-950/40' : 'border-zinc-200 bg-zinc-50/50'
+                              }`}>
+                                Crie ou salve um orçamento para gerenciar instalações ativas aqui.
+                              </div>
+                            ) : (
+                              quotes.filter(q => q.status === 'pendente' || q.status === 'aprovado').slice(0, 2).map((q) => (
+                                <div 
+                                  key={q.id}
+                                  className={`p-3 rounded-2xl border flex items-center justify-between transition-all ${
+                                    darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3 truncate">
+                                    <span className={`px-2 py-1 rounded-xl text-[9px] font-black shrink-0 ${
+                                      q.status === 'aprovado' ? 'bg-emerald-100 text-emerald-850' : 'bg-amber-100 text-amber-850'
+                                    }`}>
+                                      {q.date?.slice(0, 5) || 'Hoje'}
+                                    </span>
+                                    <div className="truncate">
+                                      <h5 className="text-xs font-bold truncate">{q.customerName}</h5>
+                                      <p className="text-[10px] text-zinc-500 truncate">{q.customerAddress || 'Oficina / Balcão'}</p>
+                                    </div>
+                                  </div>
+                                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider shrink-0 border ${
+                                    q.status === 'aprovado' 
+                                      ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
+                                      : 'bg-yellow-105 text-yellow-800 border-yellow-250'
+                                  }`}>
+                                    {q.status === 'aprovado' ? 'APROVADO' : 'PENDENTE'}
+                                  </span>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Section Summary quick counters (3 grids) */}
+                        <div className="grid grid-cols-3 gap-2">
+                          <div className={`p-3 rounded-2xl text-center border ${
+                            darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+                          }`}>
+                            <div className="text-lg font-black font-condensed text-blue-500">
+                              {quotes.filter(q => q.status === 'aprovado' || q.status === 'pago').length}
+                            </div>
+                            <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wide">Obras Ativas</div>
+                          </div>
+                          <div className={`p-3 rounded-2xl text-center border ${
+                            darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+                          }`}>
+                            <div className="text-lg font-black font-condensed text-amber-500">
+                              {quotes.length}
+                            </div>
+                            <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wide">Orçamentos</div>
+                          </div>
+                          <div className={`p-3 rounded-2xl text-center border ${
+                            darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+                          }`}>
+                            <div className="text-lg font-black font-condensed text-emerald-500">
+                              {quotes.filter(q => q.status === 'aprovado').length}
+                            </div>
+                            <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wide">Aprovados</div>
+                          </div>
+                        </div>
+
+                        {/* Saved quotes feed summary */}
+                        <div className="space-y-2 pb-6">
+                          <div className="flex justify-between items-center font-bold">
+                            <span className="text-xs uppercase tracking-wider text-zinc-500">Últimos Orçamentos</span>
+                            <button onClick={() => setViewportTab('hist')} className="text-xs text-amber-500 cursor-pointer">Ver todos</button>
+                          </div>
+
+                          <div className="space-y-2">
+                            {quotes.length === 0 ? (
+                              <div className={`text-center p-6 border border-dashed rounded-2xl text-xs text-zinc-400 font-bold ${
+                                darkMode ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-200 bg-white'
+                              }`}>
+                                Sem orçamentos no banco de dados.
+                              </div>
+                            ) : (
+                              quotes.slice(0, 3).map((q, idx) => (
+                                <div 
+                                  key={q.id}
+                                  className={`p-3 rounded-2xl border flex justify-between items-center transition-all ${
+                                    darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+                                  }`}
+                                >
+                                  <div>
+                                    <h5 className="text-xs font-bold tracking-tight">{q.customerName}</h5>
+                                    <span className="text-[9px] font-mono font-bold text-zinc-500">{q.id} • {q.date}</span>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-xs font-black font-condensed block text-zinc-900 dark:text-zinc-100">
+                                      R$ {q.total?.toFixed(2) || '0.00'}
+                                    </span>
+                                    <span className={`text-[8px] px-1 py-0.5 rounded font-black uppercase ${
+                                      q.status === 'pago' ? 'bg-emerald-100 text-emerald-800' : 'bg-zinc-105 dark:bg-zinc-800 text-zinc-500'
+                                    }`}>
+                                      {q.status}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 2. CHURRAS DE INFORMAÇÕES / CRM SALES DASHBOARD TAB */}
+                    {homeSubTab === 'dashboard' && (
+                      <div className="space-y-4 animate-fade-in pb-10">
+                        
+                        {/* KPI Summary Cards */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className={`p-3 rounded-2xl border ${darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'}`}>
+                            <span className="text-[9px] text-zinc-400 font-bold block uppercase">Faturamento Estimado</span>
+                            <span className="text-lg font-black font-condensed text-emerald-500 block">
+                              R$ {quotes.reduce((acc, q) => acc + (q.status === 'pago' || q.status === 'aprovado' ? (q.total || 0) : 0), 0).toFixed(2)}
+                            </span>
+                            <span className="text-[8px] text-zinc-500">Soma de pagos e aprovados</span>
+                          </div>
+
+                          <div className={`p-3 rounded-2xl border ${darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'}`}>
+                            <span className="text-[9px] text-zinc-400 font-bold block uppercase">Na Mesa (Pendente)</span>
+                            <span className="text-lg font-black font-condensed text-amber-500 block">
+                              R$ {quotes.reduce((acc, q) => acc + (q.status === 'pendente' ? (q.total || 0) : 0), 0).toFixed(2)}
+                            </span>
+                            <span className="text-[8px] text-zinc-500">{quotes.filter(q => q.status === 'pendente').length} propostas em espera</span>
+                          </div>
+                        </div>
+
+                        {/* SECTION: TOP CLIENTES */}
+                        <div className={`p-4 rounded-2xl border ${darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'} space-y-3`}>
+                          <div>
+                            <h4 className="text-xs font-black uppercase tracking-wider text-amber-500">🏆 Top Clientes (Maiores Compradores)</h4>
+                            <p className="text-[10px] text-zinc-500">Clientes ordenados pelo volume financeiro total das obras</p>
+                          </div>
+
+                          <div className="space-y-2.5 pt-1">
+                            {getClientSalesIntelligence().filter(c => c.totalSpent > 0).length === 0 ? (
+                              <div className="text-center p-3 text-xs text-zinc-500">Nenhum orçamento com valor salvo para gerar o gráfico.</div>
+                            ) : (
+                              getClientSalesIntelligence()
+                                .sort((a,b) => b.totalSpent - a.totalSpent)
+                                .slice(0, 4)
+                                .map((c, i) => {
+                                  // Compute pct relative to max spent
+                                  const listStats = getClientSalesIntelligence().sort((a,b) => b.totalSpent - a.totalSpent);
+                                  const max = listStats[0]?.totalSpent || 1;
+                                  const percent = Math.max(5, Math.round((c.totalSpent / max) * 100));
+                                  return (
+                                    <div key={c.name} className="space-y-1">
+                                      <div className="flex justify-between items-center text-xs font-bold font-mono">
+                                        <span className="text-zinc-800 dark:text-zinc-200 flex items-center gap-1">
+                                          <span className="text-[10px] text-zinc-400">#{i+1}</span>
+                                          {c.name}
+                                        </span>
+                                        <span className="text-amber-500 font-black">R$ {c.totalSpent.toFixed(2)}</span>
+                                      </div>
+                                      <div className="h-2 w-full bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                                        <div 
+                                          className="h-full bg-amber-400 rounded-full transition-all duration-500"
+                                          style={{ width: `${percent}%` }}
+                                        />
+                                      </div>
+                                      <div className="flex justify-between text-[9px] text-zinc-500">
+                                        <span>{c.ordersCount} {c.ordersCount === 1 ? 'pedido realizado' : 'pedidos realizados'}</span>
+                                        <span>Freq: {c.purchaseFrequencyDesc}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                            )}
+                          </div>
+                        </div>
+
+                        {/* SECTION: PRODUTOS MAIS PEDIDOS */}
+                        <div className={`p-4 rounded-2xl border ${darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'} space-y-3`}>
+                          <div>
+                            <h4 className="text-xs font-black uppercase tracking-wider text-[#3b82f6]">📊 Itens e Produtos mais Frequentes</h4>
+                            <p className="text-[10px] text-zinc-500">Análise de saída de calhas, rufos, telhas e conexões</p>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 pt-1">
+                            {getProductFrequencies().map((p) => (
+                              <div key={p.name} className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-150 dark:border-zinc-850 space-y-1.5">
+                                <span className="text-[10px] font-bold text-zinc-500 block uppercase">{p.name}</span>
+                                <div className="flex justify-between items-baseline">
+                                  <span className="text-base font-black font-condensed text-zinc-850 dark:text-zinc-150">{p.count}un</span>
+                                  <span className="text-[9px] font-bold text-zinc-450 font-mono">{Math.round(p.pct)}%</span>
+                                </div>
+                                <div className="h-1 w-full bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                                  <div className={`h-full rounded-full ${p.color}`} style={{ width: `${Math.max(5, p.pct)}%` }} />
                                 </div>
                               </div>
-                              <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider shrink-0 border ${
-                                q.status === 'aprovado' 
-                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
-                                  : 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                              }`}>
-                                {q.status === 'aprovado' ? 'APROVADO' : 'PENDENTE'}
-                              </span>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Section Summary quick counters (3 grids) */}
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className={`p-3 rounded-2xl text-center border ${
-                        darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
-                      }`}>
-                        <div className="text-lg font-black font-condensed text-blue-500">
-                          {quotes.filter(q => q.status === 'aprovado' || q.status === 'pago').length}
-                        </div>
-                        <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wide">Obras Ativas</div>
-                      </div>
-                      <div className={`p-3 rounded-2xl text-center border ${
-                        darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
-                      }`}>
-                        <div className="text-lg font-black font-condensed text-amber-500">
-                          {quotes.length}
-                        </div>
-                        <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wide">Orçamentos</div>
-                      </div>
-                      <div className={`p-3 rounded-2xl text-center border ${
-                        darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
-                      }`}>
-                        <div className="text-lg font-black font-condensed text-emerald-500">
-                          {quotes.filter(q => q.status === 'aprovado').length}
-                        </div>
-                        <div className="text-[9px] text-zinc-500 font-bold uppercase tracking-wide">Aprovados</div>
-                      </div>
-                    </div>
-
-                    {/* Saved quotes feed summary */}
-                    <div className="space-y-2 pb-6">
-                      <div className="flex justify-between items-center font-bold">
-                        <span className="text-xs uppercase tracking-wider text-zinc-500">Últimos Orçamentos</span>
-                        <button onClick={() => setViewportTab('hist')} className="text-xs text-amber-500 cursor-pointer">Ver todos</button>
-                      </div>
-
-                      <div className="space-y-2">
-                        {quotes.length === 0 ? (
-                          <div className={`text-center p-6 border border-dashed rounded-2xl text-xs text-zinc-400 font-bold ${
-                            darkMode ? 'border-zinc-800 bg-zinc-950' : 'border-zinc-200 bg-white'
-                          }`}>
-                            Sem orçamentos no banco de dados.
+                            ))}
                           </div>
-                        ) : (
-                          quotes.slice(0, 3).map((q, idx) => (
-                            <div 
-                              key={q.id}
-                              className={`p-3 rounded-2xl border flex justify-between items-center transition-all ${
-                                darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
-                              }`}
-                            >
-                              <div>
-                                <h5 className="text-xs font-bold tracking-tight">{q.customerName}</h5>
-                                <span className="text-[9px] font-mono font-bold text-zinc-500">{q.id} • {q.date}</span>
-                              </div>
-                              <div className="text-right">
-                                <span className="text-xs font-black font-condensed block text-zinc-900 dark:text-zinc-100">
-                                  R$ {q.total?.toFixed(2) || '0.00'}
-                                </span>
-                                <span className={`text-[8px] px-1 py-0.5 rounded font-black uppercase ${
-                                  q.status === 'pago' ? 'bg-emerald-100 text-emerald-800' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'
-                                }`}>
-                                  {q.status}
-                                </span>
-                              </div>
-                            </div>
-                          ))
-                        )}
+                        </div>
+
+                        {/* SECTION: PRE-ANÁLISE PREDITIVA CRM */}
+                        <div className={`p-4 rounded-2xl border ${darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'} space-y-3`}>
+                          <div>
+                            <h4 className="text-xs font-black uppercase tracking-wider text-emerald-500 flex items-center gap-1">
+                              <Sparkles className="w-3.5 h-3.5" />
+                              Pre-Análise Inteligente (Previsão de Recompra)
+                            </h4>
+                            <p className="text-[10px] text-zinc-500">Estimativas geradas por inteligência baseada no intervalo histórico de pedidos</p>
+                          </div>
+
+                          <div className="space-y-2 pt-1">
+                            {getClientSalesIntelligence().length === 0 ? (
+                              <div className="text-center p-3 text-xs text-zinc-500">Nenhum histórico disponível. Registre orçamentos para ativar.</div>
+                            ) : (
+                              getClientSalesIntelligence()
+                                .sort((a,b) => (a.daysUntilPredicted || 0) - (b.daysUntilPredicted || 0))
+                                .map((c) => {
+                                  const isCritical = c.daysUntilPredicted <= 5 || c.predictionStatus === 'past_due';
+                                  
+                                  // Formatting the custom WhatsApp message
+                                  const customMsgText = `Olá, *${c.name}*! Tudo bem?\n\nAqui é o responsável de *${companyName}*.\nNotamos em nossos registros que você costuma realizar compras de calhas ou rufos conosco ${c.purchaseFrequencyDesc}.\n\nComo faz um tempo desde o seu último pedido, gostaria de solicitar um novo orçamento personalizado, agendar uma visita preventiva ou verificar se precisa de novos acabamentos sem compromisso?\n\nEstamos à sua inteira disposição!`;
+                                  const zapUrl = `https://api.whatsapp.com/send?phone=${(c.phone || '').replace(/\D/g, '')}&text=${encodeURIComponent(customMsgText)}`;
+
+                                  return (
+                                    <div 
+                                      key={c.name} 
+                                      className={`p-3 rounded-xl border flex flex-col justify-between gap-3 transition-all ${
+                                        isCritical 
+                                          ? 'bg-red-50/40 dark:bg-red-950/10 border-red-200 dark:border-red-900/30' 
+                                          : 'bg-zinc-50 dark:bg-zinc-950/40 border-zinc-150 dark:border-zinc-850'
+                                      }`}
+                                    >
+                                      <div className="flex justify-between items-start">
+                                        <div>
+                                          <h5 className="text-xs font-black">{c.name}</h5>
+                                          <p className="text-[9px] text-zinc-500">Intervalo médio: {c.purchaseFrequencyDesc}</p>
+                                        </div>
+                                        <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider ${
+                                          isCritical 
+                                            ? 'bg-red-150 text-red-800 dark:bg-red-950 dark:text-red-400 border border-red-200 dark:border-red-800' 
+                                            : 'bg-zinc-150 dark:bg-zinc-800 text-zinc-650 dark:text-zinc-350'
+                                        }`}>
+                                          {c.daysUntilPredicted <= 0 
+                                            ? '🚨 CICLO ESGOTADO (OFERTE!)' 
+                                            : c.daysUntilPredicted <= 5 
+                                              ? '🔔 COMPRA IMINENTE' 
+                                              : `Ciclo OK (${c.daysUntilPredicted} dias restantes)`}
+                                        </span>
+                                      </div>
+
+                                      <div className="bg-white dark:bg-zinc-900 p-2 rounded-lg border border-zinc-100 dark:border-zinc-850 text-[10px] text-zinc-600 dark:text-zinc-350 italic leading-normal">
+                                        "Com base no tempo habitual de {c.avgIntervalDays} dias, sugerimos enviar uma mensagem de acompanhamento para oferecer novas calhas ou conexões preventivas."
+                                      </div>
+
+                                      <div className="flex gap-2 justify-end">
+                                        <a 
+                                          href={zapUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex items-center gap-1 py-1.5 px-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition cursor-pointer"
+                                        >
+                                          <Send className="w-3 h-3" />
+                                          <span>💬 Ofertar no WhatsApp</span>
+                                        </a>
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                            )}
+                          </div>
+                        </div>
+
                       </div>
-                    </div>
+                    )}
+
+                    {/* 3. CADASTRO DE CLIENTES ISOLADOS (SEM ORÇAMENTOS) */}
+                    {homeSubTab === 'clientes' && (
+                      <div className="space-y-4 animate-fade-in pb-10">
+                        {/* INPUT PANEL CARD */}
+                        <form onSubmit={handleSaveClient} className={`p-4 rounded-2xl border ${darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'} space-y-3`}>
+                          <div className="space-y-0.5">
+                            <h4 className="text-xs font-black uppercase text-amber-500">
+                              {cEditingId ? '✏️ Editar Dados do Cliente' : '👤 Novo Cadastro de Cliente (Sem Orçamento)'}
+                            </h4>
+                            <p className="text-[10px] text-zinc-500">Você pode guardar os dados dos clientes para fazer orçamentos rápidos no futuro.</p>
+                          </div>
+
+                          <div className="space-y-2.5">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-zinc-400">Nome Completo / Razão Social</label>
+                              <input 
+                                type="text"
+                                placeholder="Nome do cliente"
+                                value={cName}
+                                onChange={(e) => setCName(e.target.value)}
+                                className="w-full bg-white dark:bg-zinc-950 text-xs py-2 px-3 border dark:border-zinc-850 rounded-xl outline-none focus:border-amber-400"
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-zinc-400">Telefone / WhatsApp</label>
+                              <input 
+                                type="text"
+                                placeholder="Ex: (11) 99999-8888"
+                                value={cPhone}
+                                onChange={(e) => setCPhone(e.target.value)}
+                                className="w-full bg-white dark:bg-zinc-950 text-xs py-2 px-3 border dark:border-zinc-850 rounded-xl outline-none focus:border-amber-400"
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-bold text-zinc-400">Endereço Completo</label>
+                              <input 
+                                type="text"
+                                placeholder="Rua, número, bairro..."
+                                value={cAddress}
+                                onChange={(e) => setCAddress(e.target.value)}
+                                className="w-full bg-white dark:bg-zinc-950 text-xs py-2 px-3 border dark:border-zinc-850 rounded-xl outline-none focus:border-amber-400"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="pt-2 flex gap-2">
+                            {cEditingId && (
+                              <button 
+                                type="button"
+                                onClick={() => {
+                                  setCName('');
+                                  setCPhone('');
+                                  setCAddress('');
+                                  setCEditingId(null);
+                                }}
+                                className="flex-1 py-2 bg-zinc-500 hover:bg-zinc-650 text-white font-bold text-xs rounded-xl cursor-pointer"
+                              >
+                                Cancelar
+                              </button>
+                            )}
+                            <button 
+                              type="submit"
+                              className="flex-[2] py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer"
+                            >
+                              {cEditingId ? 'Salvar Edições' : 'Cadastrar Cliente'}
+                            </button>
+                          </div>
+                        </form>
+
+                        {/* LIST DIRECTORY */}
+                        <div className="space-y-2">
+                          <h4 className="text-xs font-black uppercase text-zinc-500 tracking-wider">Diretório de Clientes Salvamentos</h4>
+                          
+                          <div className="space-y-2">
+                            {clients.length === 0 ? (
+                              <div className="text-center p-6 border border-dashed rounded-2xl text-xs text-zinc-450 italic">Nenhum cliente cadastrado no momento. Cadastre acima!</div>
+                            ) : (
+                              clients.map((c) => {
+                                // Find previous estimates match
+                                const matchingEstimates = quotes.filter(q => (q.customerName || '').trim().toLowerCase() === (c.name || '').trim().toLowerCase());
+                                const sumValue = matchingEstimates.reduce((acc, q) => acc + (q.total || 0), 0);
+
+                                return (
+                                  <div key={c.id} className={`p-3 rounded-2xl border flex flex-col gap-2 ${darkMode ? 'bg-zinc-900 border-zinc-850' : 'bg-white border-zinc-150'}`}>
+                                    <div className="flex justify-between items-start">
+                                      <div>
+                                        <h5 className="text-xs font-black">{c.name}</h5>
+                                        <p className="text-[10px] font-mono text-zinc-500">{c.id} • {c.phone || '(Sem WhatsApp)'}</p>
+                                      </div>
+                                      <span className="text-[9px] bg-amber-500/10 text-amber-600 font-bold px-1.5 py-0.5 rounded">
+                                        {matchingEstimates.length} orçamentos (R$ {sumValue.toFixed(2)})
+                                      </span>
+                                    </div>
+                                    
+                                    {c.address && (
+                                      <p className="text-[10px] text-zinc-500 leading-normal flex items-center gap-1">
+                                        <MapPin className="w-3 h-3 shrink-0" />
+                                        <span>{c.address}</span>
+                                      </p>
+                                    )}
+
+                                    <div className="pt-2 flex gap-2 border-t border-zinc-100 dark:border-zinc-850 justify-between items-center text-[10px] font-bold">
+                                      {/* Make a Quote directly! */}
+                                      <button 
+                                        onClick={() => {
+                                          setWName(c.name);
+                                          setWPhone(c.phone || '');
+                                          setWAddress(c.address || '');
+                                          setWizardStep(1);
+                                          setViewportTab('orc');
+                                        }}
+                                        className="py-1 px-2.5 bg-amber-400 hover:bg-amber-500 text-slate-950 font-black rounded-lg transition text-[9px] uppercase tracking-wider cursor-pointer"
+                                        title="Lançar um novo orçamento para este cliente"
+                                      >
+                                        📝 Fazer Orçamento
+                                      </button>
+                                      
+                                      <div className="flex gap-1">
+                                        <button 
+                                          onClick={() => handleEditClientStart(c)}
+                                          className="p-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-650 hover:bg-zinc-200 rounded cursor-pointer"
+                                        >
+                                          <Edit3 className="w-3 h-3" />
+                                        </button>
+                                        <button 
+                                          onClick={() => handleDeleteClient(c.id)}
+                                          className="p-1.5 bg-zinc-100 dark:bg-zinc-800 text-red-400 hover:bg-red-50 rounded cursor-pointer"
+                                        >
+                                          <Trash2 className="w-3 h-3" />
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+
+                      </div>
+                    )}
 
                   </div>
                 )}
@@ -1080,6 +1659,70 @@ export default function App() {
                           <h3 className="text-base font-extrabold">Identifique o Cliente</h3>
                           <p className="text-xs text-zinc-400">Adicione os dados cadastrais da proposta</p>
                         </div>
+
+                        {/* Quick registered client autocomplete dropdown selection */}
+                        {clients.length > 0 && (
+                          <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl space-y-2 relative">
+                            <div className="flex justify-between items-center text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                              <span className="flex items-center gap-1">
+                                <Users className="w-3.5 h-3.5" />
+                                CARREGAR CLIENTE SALVO?
+                              </span>
+                              {wName && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setWName("");
+                                    setWPhone("");
+                                    setWAddress("");
+                                    setWizardClientSearch("");
+                                  }}
+                                  className="text-[9px] text-red-500 font-black cursor-pointer uppercase tracking-tight hover:underline"
+                                >
+                                  Limpar Campos [x]
+                                </button>
+                              )}
+                            </div>
+                            <div className="relative">
+                              <input 
+                                type="text"
+                                placeholder="🔍 Comece a digitar o nome..."
+                                value={wizardClientSearch}
+                                onChange={(e) => {
+                                  setWizardClientSearch(e.target.value);
+                                  setShowWizardClientDropdown(true);
+                                }}
+                                onFocus={() => setShowWizardClientDropdown(true)}
+                                className="w-full bg-white dark:bg-zinc-950 text-xs py-1.5 px-3 rounded-lg border dark:border-zinc-850 outline-none focus:border-amber-400 text-zinc-900 dark:text-zinc-100"
+                              />
+                              {showWizardClientDropdown && (
+                                <div className="absolute left-0 right-0 mt-1 max-h-40 overflow-y-auto bg-white dark:bg-zinc-900 border dark:border-zinc-850 rounded-xl shadow-xl z-50">
+                                  {clients.filter(c => c.name.toLowerCase().includes(wizardClientSearch.toLowerCase())).length === 0 ? (
+                                    <div className="p-2 text-[10px] text-zinc-550 italic text-center">Nenhum cliente correspondente encontrado</div>
+                                  ) : (
+                                    clients
+                                      .filter(c => c.name.toLowerCase().includes(wizardClientSearch.toLowerCase()))
+                                      .map(c => (
+                                        <div 
+                                          key={c.id}
+                                          onClick={() => {
+                                            setWName(c.name || "");
+                                            setWPhone(c.phone || "");
+                                            setWAddress(c.address || "");
+                                            setWizardClientSearch(c.name || "");
+                                            setShowWizardClientDropdown(false);
+                                          }}
+                                          className="p-2 text-[11px] text-left cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800 border-b border-zinc-100 dark:border-zinc-850 text-zinc-800 dark:text-zinc-200"
+                                        >
+                                          <strong>{c.name}</strong> {c.phone ? `(${c.phone})` : ""}
+                                        </div>
+                                      ))
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
 
                         <div className="space-y-3">
                           <div className="space-y-1">
@@ -1897,6 +2540,7 @@ export default function App() {
                         onDeleteQuote={handleDeleteQuoteId}
                         onEditLoad={handleEditLoad}
                         onPrintQuote={handleDirectPrintReprnt}
+                        companyName={companyName}
                       />
                     </div>
                   </div>
