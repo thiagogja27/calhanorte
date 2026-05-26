@@ -2205,7 +2205,7 @@ export default function App() {
 
                     {/* Company Configuration credentials form */}
                     <form onSubmit={saveCompanyConfig} className={`p-4 rounded-2xl border space-y-3.5 text-xs ${
-                      darkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-white border-zinc-200'
+                      darkMode ? 'bg-zinc-900 border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-800'
                     }`}>
                       <span className="text-[11px] font-black text-zinc-400 uppercase tracking-widest block border-b pb-1 dark:border-zinc-800">Definições da Oficina</span>
                       
@@ -2215,7 +2215,7 @@ export default function App() {
                           type="text" 
                           value={companyName}
                           onChange={(e) => setCompanyName(e.target.value)}
-                          className="w-full bg-zinc-100 dark:bg-zinc-950 border rounded-lg px-2.5 py-1.5 focus:border-amber-400 outline-none font-bold"
+                          className="w-full bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 rounded-lg px-2.5 py-1.5 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none font-bold"
                         />
                       </div>
 
@@ -2226,7 +2226,7 @@ export default function App() {
                             type="text" 
                             value={ownerName}
                             onChange={(e) => setOwnerName(e.target.value)}
-                            className="w-full bg-zinc-100 dark:bg-zinc-950 border rounded-lg px-2.5 py-1.5 outline-none font-semibold"
+                            className="w-full bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 rounded-lg px-2.5 py-1.5 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none font-semibold"
                           />
                         </div>
                         <div className="space-y-1">
@@ -2235,7 +2235,7 @@ export default function App() {
                             type="text" 
                             value={companyPhone}
                             onChange={(e) => setCompanyPhone(e.target.value)}
-                            className="w-full bg-zinc-100 dark:bg-zinc-950 border rounded-lg px-2.5 py-1.5 outline-none font-semibold"
+                            className="w-full bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 rounded-lg px-2.5 py-1.5 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none font-semibold"
                           />
                         </div>
                       </div>
@@ -2246,7 +2246,7 @@ export default function App() {
                           type="text" 
                           value={companyCNPJ}
                           onChange={(e) => setCompanyCNPJ(e.target.value)}
-                          className="w-full bg-zinc-100 dark:bg-zinc-950 border rounded-lg px-2.5 py-1.5 outline-none"
+                          className="w-full bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 rounded-lg px-2.5 py-1.5 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
                         />
                       </div>
 
@@ -2257,13 +2257,13 @@ export default function App() {
                           value={companyLogo}
                           onChange={(e) => setCompanyLogo(e.target.value)}
                           placeholder="Fórmula de imagem Base64"
-                          className="w-full bg-zinc-100 dark:bg-zinc-950 border rounded-lg px-2.5 py-1.5 outline-none truncate"
+                          className="w-full bg-zinc-100 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 rounded-lg px-2.5 py-1.5 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none truncate"
                         />
                       </div>
 
                       <button 
                         type="submit"
-                        className="w-full py-2.5 bg-amber-400 hover:bg-amber-500 text-zinc-950 font-bold rounded-xl transition"
+                        className="w-full py-2.5 bg-amber-400 hover:bg-amber-500 text-zinc-950 font-bold rounded-xl transition cursor-pointer"
                       >
                         Salvar Informações da Empresa
                       </button>

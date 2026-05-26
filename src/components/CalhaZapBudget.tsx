@@ -443,64 +443,64 @@ export default function CalhaZapBudget({
       {/* LEFT FORM WORKSPACE */}
       <div className="space-y-6">
         {/* Client details Card */}
-        <div className="bg-[#f2f3f4] rounded-2xl border border-[#b0b2b5] p-5 shadow-sm space-y-4">
-          <h3 className="text-sm font-extrabold text-[#5a5c5f] uppercase tracking-wider flex items-center gap-2 border-l-4 border-[#f5c800] pl-2">
+        <div className="bg-[#f2f3f4] dark:bg-zinc-900/40 rounded-2xl border border-[#b0b2b5] dark:border-zinc-800 p-5 shadow-sm space-y-4">
+          <h3 className="text-sm font-extrabold text-[#5a5c5f] dark:text-zinc-350 uppercase tracking-wider flex items-center gap-2 border-l-4 border-[#f5c800] pl-2">
             👤 Ficha do Cliente & Localização
           </h3>
           <div className="space-y-3.5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#3a3a3a]">Nome ou Empresa</label>
+                <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">Nome ou Empresa</label>
                 <input
                   type="text"
                   value={custName}
                   onChange={(e) => setCustName(e.target.value)}
                   placeholder="Ex: João da Silva"
-                  className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-xs font-semibold outline-none"
+                  className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-semibold text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#3a3a3a]">WhatsApp (DDD+Número)</label>
+                <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">WhatsApp (DDD+Número)</label>
                 <input
                   type="text"
                   value={custPhone}
                   onChange={(e) => setCustPhone(e.target.value)}
                   placeholder="Ex: 11999990000"
-                  className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-xs font-semibold outline-none"
+                  className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-semibold text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
                 />
               </div>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-[#3a3a3a]">Endereço Completo de Entrega/Obra</label>
+              <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">Endereço Completo de Entrega/Obra</label>
               <input
                 type="text"
                 value={custAddress}
                 onChange={(e) => setCustAddress(e.target.value)}
                 placeholder="Ex: Rua das Flores, 123 - Centro"
-                className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-xs font-semibold outline-none"
+                className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-semibold text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3 pb-1">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#3a3a3a]">Dias de Validade</label>
+                <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">Dias de Validade</label>
                 <input
                   type="number"
                   value={validDays || ""}
                   onChange={(e) => setValidDays(Math.max(1, parseInt(e.target.value) || 0))}
                   placeholder="Ex: 15"
-                  className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-xs font-semibold outline-none"
+                  className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-semibold text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#3a3a3a]">Desconto Comercial (%)</label>
+                <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">Desconto Comercial (%)</label>
                 <input
                   type="number"
                   value={discountPercent || ""}
                   onChange={(e) => setDiscountPercent(Math.max(0, Math.min(99, parseInt(e.target.value) || 0)))}
                   placeholder="Ex: 5"
-                  className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-xs font-semibold outline-none"
+                  className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-semibold text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
                 />
               </div>
             </div>
@@ -550,30 +550,30 @@ export default function CalhaZapBudget({
 
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div>
-              <label className="text-[10px] font-bold text-[#3a3a3a] block mb-1">Qtd (un)</label>
+              <label className="text-[10px] font-bold text-[#3a3a3a] dark:text-zinc-350 block mb-1">Qtd (un)</label>
               <input
                 type="number"
                 value={tileQty || ""}
                 onChange={(e) => setTileQty(Math.max(1, parseInt(e.target.value) || 0))}
-                className="w-full bg-white border border-[#b0b2b5] rounded-xl px-2 py-1.5 text-center outline-none font-bold"
+                className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-2 py-1.5 text-center text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none font-bold"
               />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-[#3a3a3a] block mb-1">Comprim. (m)</label>
+              <label className="text-[10px] font-bold text-[#3a3a3a] dark:text-zinc-350 block mb-1">Comprim. (m)</label>
               <input
                 type="number"
                 value={tileLen || ""}
                 onChange={(e) => setTileLen(Math.max(0.1, parseFloat(e.target.value) || 0))}
-                className="w-full bg-white border border-[#b0b2b5] rounded-xl px-2 py-1.5 text-center outline-none font-bold"
+                className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-2 py-1.5 text-center text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none font-bold"
               />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-[#3a3a3a] block mb-1">Preço R$/m²</label>
+              <label className="text-[10px] font-bold text-[#3a3a3a] dark:text-zinc-350 block mb-1">Preço R$/m²</label>
               <input
                 type="number"
                 value={tilePrice || ""}
                 onChange={(e) => setTilePrice(Math.max(0, parseFloat(e.target.value) || 0))}
-                className="w-full bg-white border border-[#b0b2b5] rounded-xl px-2 py-1.5 text-center outline-none font-bold text-amber-800"
+                className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-2 py-1.5 text-center text-amber-800 dark:text-amber-400 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none font-bold"
               />
             </div>
           </div>
@@ -635,20 +635,20 @@ export default function CalhaZapBudget({
 
           <div className="grid grid-cols-4 gap-2 text-xs">
             <div>
-              <label className="text-[9px] font-bold text-[#3a3a3a] block mb-1">Corte (mm)</label>
+              <label className="text-[9px] font-bold text-[#3a3a3a] dark:text-zinc-350 block mb-1">Corte (mm)</label>
               <input
                 type="number"
                 value={calhaCorte || ""}
                 onChange={(e) => setCalhaCorte(Math.max(100, parseInt(e.target.value) || 0))}
-                className="w-full bg-white border border-[#b0b2b5] rounded-xl px-1.5 py-1.5 text-center outline-none font-bold"
+                className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-1.5 py-1.5 text-center text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none font-bold"
               />
             </div>
             <div>
-              <label className="text-[9px] font-bold text-[#3a3a3a] block mb-1">Esp (mm)</label>
+              <label className="text-[9px] font-bold text-[#3a3a3a] dark:text-zinc-350 block mb-1">Esp (mm)</label>
               <select
                 value={calhaEsp}
                 onChange={(e) => setCalhaEsp(e.target.value)}
-                className="w-full bg-white border border-[#b0b2b5] rounded-xl px-1.5 py-1.5 text-center outline-none font-bold text-[10px]"
+                className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-1.5 py-1.5 text-center text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none font-bold text-[10px]"
               >
                 <option>0,40</option>
                 <option>0,43</option>
@@ -658,21 +658,21 @@ export default function CalhaZapBudget({
               </select>
             </div>
             <div>
-              <label className="text-[9px] font-bold text-[#3a3a3a] block mb-1">Metro (m)</label>
+              <label className="text-[9px] font-bold text-[#3a3a3a] dark:text-zinc-350 block mb-1">Metro (m)</label>
               <input
                 type="number"
                 value={calhaLen || ""}
                 onChange={(e) => setCalhaLen(Math.max(0.1, parseFloat(e.target.value) || 0))}
-                className="w-full bg-white border border-[#b0b2b5] rounded-xl px-1.5 py-1.5 text-center outline-none font-bold"
+                className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-1.5 py-1.5 text-center text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none font-bold"
               />
             </div>
             <div>
-              <label className="text-[9px] font-bold text-[#3a3a3a] block mb-1">R$/Metro</label>
+              <label className="text-[9px] font-bold text-[#3a3a3a] dark:text-zinc-350 block mb-1">R$/Metro</label>
               <input
                 type="number"
                 value={calhaPrice || ""}
                 onChange={(e) => setCalhaPrice(Math.max(0, parseFloat(e.target.value) || 0))}
-                className="w-full bg-white border border-[#b0b2b5] rounded-xl px-1.5 py-1.5 text-center outline-none font-bold text-amber-800"
+                className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-1.5 py-1.5 text-center text-amber-800 dark:text-amber-400 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none font-bold"
               />
             </div>
           </div>
@@ -734,20 +734,20 @@ export default function CalhaZapBudget({
 
           <div className="grid grid-cols-4 gap-2 text-xs">
             <div>
-              <label className="text-[9px] font-bold text-[#3a3a3a] block mb-1">Corte (mm)</label>
+              <label className="text-[9px] font-bold text-[#3a3a3a] dark:text-zinc-350 block mb-1">Corte (mm)</label>
               <input
                 type="number"
                 value={rufoCorte || ""}
                 onChange={(e) => setRufoCorte(Math.max(100, parseInt(e.target.value) || 0))}
-                className="w-full bg-white border border-[#b0b2b5] rounded-xl px-1.5 py-1.5 text-center outline-none font-bold"
+                className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-1.5 py-1.5 text-center text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none font-bold"
               />
             </div>
             <div>
-              <label className="text-[9px] font-bold text-[#3a3a3a] block mb-1">Esp (mm)</label>
+              <label className="text-[9px] font-bold text-[#3a3a3a] dark:text-zinc-350 block mb-1">Esp (mm)</label>
               <select
                 value={rufoEsp}
                 onChange={(e) => setRufoEsp(e.target.value)}
-                className="w-full bg-white border border-[#b0b2b5] rounded-xl px-1.5 py-1.5 text-center outline-none font-bold text-[10px]"
+                className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-1.5 py-1.5 text-center text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none font-bold text-[10px]"
               >
                 <option>0,40</option>
                 <option>0,43</option>
@@ -756,21 +756,21 @@ export default function CalhaZapBudget({
               </select>
             </div>
             <div>
-              <label className="text-[9px] font-bold text-[#3a3a3a] block mb-1">Metro (m)</label>
+              <label className="text-[9px] font-bold text-[#3a3a3a] dark:text-zinc-350 block mb-1">Metro (m)</label>
               <input
                 type="number"
                 value={rufoLen || ""}
                 onChange={(e) => setRufoLen(Math.max(0.1, parseFloat(e.target.value) || 0))}
-                className="w-full bg-white border border-[#b0b2b5] rounded-xl px-1.5 py-1.5 text-center outline-none font-bold"
+                className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-1.5 py-1.5 text-center text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none font-bold"
               />
             </div>
             <div>
-              <label className="text-[9px] font-bold text-[#3a3a3a] block mb-1">R$/Metro</label>
+              <label className="text-[9px] font-bold text-[#3a3a3a] dark:text-zinc-350 block mb-1">R$/Metro</label>
               <input
                 type="number"
                 value={rufoPrice || ""}
                 onChange={(e) => setRufoPrice(Math.max(0, parseFloat(e.target.value) || 0))}
-                className="w-full bg-white border border-[#b0b2b5] rounded-xl px-1.5 py-1.5 text-center outline-none font-bold text-amber-800"
+                className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-1.5 py-1.5 text-center text-amber-800 dark:text-amber-400 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none font-bold"
               />
             </div>
           </div>
@@ -806,21 +806,21 @@ export default function CalhaZapBudget({
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#3a3a3a]">Meters linear (m)</label>
+                <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">Meters linear (m)</label>
                 <input
                   type="number"
                   value={condutorLen || ""}
                   onChange={(e) => setCondutorLen(Math.max(0.1, parseFloat(e.target.value) || 0))}
-                  className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-xs font-semibold outline-none"
+                  className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-semibold text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#3a3a3a]">R$ por metro</label>
+                <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">R$ por metro</label>
                 <input
                   type="number"
                   value={condutorPrice || ""}
                   onChange={(e) => setCondutorPrice(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-xs font-semibold text-amber-800 outline-none"
+                  className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-semibold text-amber-800 dark:text-amber-400 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
                 />
               </div>
             </div>
@@ -843,11 +843,11 @@ export default function CalhaZapBudget({
           <div className="space-y-3.5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#3a3a3a]">Modelo</label>
+                <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">Modelo</label>
                 <select
                   value={selChamine}
                   onChange={(e) => setSelChamine(e.target.value)}
-                  className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-xs font-semibold outline-none text-[#1a1a1a]"
+                  className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-semibold focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none text-[#1a1a1a] dark:text-zinc-100"
                 >
                   <option>Chaminé de Lareira Galvanizada</option>
                   <option>Chaminé de Aquecedor Alumínio</option>
@@ -858,33 +858,33 @@ export default function CalhaZapBudget({
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#3a3a3a]">Diâmetro (Ø mm)</label>
+                <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">Diâmetro (Ø mm)</label>
                 <input
                   type="number"
                   value={chamineDiam || ""}
                   onChange={(e) => setChamineDiam(Math.max(50, parseInt(e.target.value) || 0))}
-                  className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-xs font-semibold outline-none"
+                  className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-semibold text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#3a3a3a]">Quantidade (un)</label>
+                <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">Quantidade (un)</label>
                 <input
                   type="number"
                   value={chamineQty || ""}
                   onChange={(e) => setChamineQty(Math.max(1, parseInt(e.target.value) || 0))}
-                  className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-xs font-semibold outline-none"
+                  className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-semibold text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#3a3a3a]">Valor Unitário (R$)</label>
+                <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">Valor Unitário (R$)</label>
                 <input
                   type="number"
                   value={chaminePrice || ""}
                   onChange={(e) => setChaminePrice(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-xs font-semibold text-amber-800 outline-none"
+                  className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-semibold text-amber-800 dark:text-amber-405 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
                 />
               </div>
             </div>
@@ -909,22 +909,22 @@ export default function CalhaZapBudget({
           </p>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-[#3a3a3a]">Bisnagas cinza/preto</label>
+              <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">Bisnagas cinza/preto</label>
               <input
                 type="number"
                 value={puQty || ""}
                 onChange={(e) => setPuQty(Math.max(0, parseInt(e.target.value) || 0))}
                 placeholder="Ex: 4"
-                className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-xs font-semibold outline-none"
+                className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-semibold text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-bold text-[#3a3a3a]">Preço por Bisnaga (R$)</label>
+              <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">Preço por Bisnaga (R$)</label>
               <input
                 type="number"
                 value={puPrice || ""}
                 onChange={(e) => setPuPrice(Math.max(0, parseFloat(e.target.value) || 0))}
-                className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-xs font-semibold text-amber-800 outline-none"
+                className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-semibold text-amber-800 dark:text-amber-400 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
               />
             </div>
           </div>
@@ -937,33 +937,33 @@ export default function CalhaZapBudget({
           </h3>
           <div className="space-y-3">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-[#3a3a3a]">Descrição do Serviço Técnico</label>
+              <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">Descrição do Serviço Técnico</label>
               <input
                 type="text"
                 value={svcDesc}
                 onChange={(e) => setSvcDesc(e.target.value)}
                 placeholder="Ex: Instalação das calhas no beiral traseiro c/ andaime"
-                className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-xs font-semibold outline-none"
+                className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-semibold text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#3a3a3a]">Qtd de Técnicos / Dias</label>
+                <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">Qtd de Técnicos / Dias</label>
                 <input
                   type="number"
                   value={svcQty || ""}
                   onChange={(e) => setSvcQty(Math.max(1, parseInt(e.target.value) || 0))}
-                  className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-xs font-semibold outline-none"
+                  className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-semibold text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#3a3a3a]">Preço Cobrado (R$)</label>
+                <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">Preço Cobrado (R$)</label>
                 <input
                   type="number"
                   value={svcPrice || ""}
                   onChange={(e) => setSvcPrice(Math.max(0, parseFloat(e.target.value) || 0))}
-                  className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-xs font-semibold text-amber-800 outline-none"
+                  className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-semibold text-amber-800 dark:text-amber-400 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
                 />
               </div>
             </div>
@@ -986,50 +986,50 @@ export default function CalhaZapBudget({
           <div className="space-y-3.5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#3a3a3a]">Condições de Pagamento</label>
+                <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">Condições de Pagamento</label>
                 <input
                   type="text"
                   value={paymentCondition}
                   onChange={(e) => setPaymentCondition(e.target.value)}
                   placeholder="Ex: 50% ato, 50% entrega"
-                  className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-xs font-semibold outline-none"
+                  className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-semibold text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold text-[#3a3a3a]">Garantias / Avisos</label>
+                <label className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300">Garantias / Avisos</label>
                 <input
                   type="text"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Ex: Garantia de 1 ano"
-                  className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-xs font-semibold outline-none"
+                  className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-xl px-3 py-2 text-xs font-semibold text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
                 />
               </div>
             </div>
 
-            <div className="border-t border-[#b0b2b5] pt-3 mt-1 space-y-2">
-              <span className="text-xs font-bold text-[#3a3a3a] block uppercase mb-1">Adicionar Item Extra/Acessório Avulso:</span>
+            <div className="border-t border-[#b0b2b5] dark:border-zinc-800 pt-3 mt-1 space-y-2">
+              <span className="text-xs font-bold text-[#3a3a3a] dark:text-zinc-300 block uppercase mb-1">Adicionar Item Extra/Acessório Avulso:</span>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <input
                   type="text"
                   value={extraDesc}
                   onChange={(e) => setExtraDesc(e.target.value)}
                   placeholder="Nome do assessório. Ex: Grelha"
-                  className="col-span-1 sm:col-span-1 bg-white border border-[#b0b2b5] rounded-lg px-2.5 py-1 text-xs outline-none font-bold"
+                  className="col-span-1 sm:col-span-1 bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-lg px-2.5 py-1 text-xs text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none font-bold"
                 />
                 <input
                   type="number"
                   value={extraQty || ""}
                   onChange={(e) => setExtraQty(Math.max(1, parseInt(e.target.value) || 0))}
                   placeholder="Qtd"
-                  className="w-full bg-white border border-[#b0b2b5] rounded-lg px-2.5 py-1 text-xs outline-none"
+                  className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-lg px-2.5 py-1 text-xs text-zinc-850 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
                 />
                 <input
                   type="number"
                   value={extraPrice || ""}
                   onChange={(e) => setExtraPrice(Math.max(0, parseFloat(e.target.value) || 0))}
                   placeholder="R$ / un"
-                  className="w-full bg-white border border-[#b0b2b5] rounded-lg px-2.5 py-1 text-xs outline-none"
+                  className="w-full bg-white dark:bg-zinc-950 border border-[#b0b2b5] dark:border-zinc-800 rounded-lg px-2.5 py-1 text-xs text-[#b45309] dark:text-amber-400 placeholder-zinc-400 dark:placeholder-zinc-650 focus:border-amber-400 focus:ring-1 focus:ring-amber-400 outline-none"
                 />
               </div>
               <button

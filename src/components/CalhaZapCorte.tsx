@@ -156,7 +156,7 @@ export default function CalhaZapCorte({ verificarAtivo, exibirLock }: CalhaZapCo
                   value={wVal || ""}
                   onChange={(e) => handleCutChange(i, parseInt(e.target.value) || 0)}
                   placeholder="Largura mm"
-                  className="w-full bg-white border border-[#b0b2b5] rounded-lg px-3 py-1.5 text-xs outline-none"
+                  className="w-full bg-white dark:bg-zinc-900 border border-zinc-250 dark:border-zinc-805 rounded-lg px-3 py-1.5 text-xs text-zinc-800 dark:text-zinc-100 outline-none"
                 />
                 <span className="absolute right-3 top-2 text-[10px] text-[#6a6a6a] font-bold">mm</span>
               </div>

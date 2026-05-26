@@ -133,14 +133,14 @@ export default function CalhaZapFornecedores({ userId, verificarAtivo }: CalhaZa
         </p>
       </div>
 
-      <div className="flex bg-white rounded-xl border border-[#b0b2b5] px-3.5 py-2 items-center gap-3">
+      <div className="flex bg-white dark:bg-zinc-900 rounded-xl border border-zinc-250 dark:border-zinc-800 px-3.5 py-2 items-center gap-3 animate-fade-in shadow-xs">
         <Search className="w-4 h-4 text-zinc-400 shrink-0" />
         <input
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Buscar distribuidoras, liga ou material..."
-          className="w-full text-xs text-[#1a1a1a] outline-none"
+          className="w-full text-xs text-[#1a1a1a] dark:text-zinc-100 bg-transparent outline-none"
         />
       </div>
 

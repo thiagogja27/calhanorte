@@ -263,7 +263,7 @@ export default function AcoAssistant() {
           onChange={(e) => setInputText(e.target.value)}
           placeholder="Perguntar espessuras, fórmulas ou ligas..."
           disabled={loading}
-          className="flex-1 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-105 placeholder-slate-500 focus:outline-none focus:border-orange-500 text-sm transition"
+          className="flex-1 px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-orange-500 text-sm transition"
         />
         <button
           id="btn-send-assistant"
