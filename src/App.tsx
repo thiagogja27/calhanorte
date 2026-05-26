@@ -946,7 +946,7 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col items-center justify-center p-0 md:p-6 transition-colors duration-300 font-sans ${darkMode ? 'dark bg-zinc-950 text-zinc-100' : 'bg-stone-100 text-zinc-900'}`}>
+    <div className={`min-h-screen flex flex-col items-center justify-start md:justify-center p-0 md:py-8 md:px-6 transition-colors duration-300 font-sans overflow-y-auto ${darkMode ? 'dark bg-zinc-950 text-zinc-100' : 'bg-stone-100 text-zinc-900'}`}>
       
       {/* Absolute Header for Desktop/Tablet View */}
       <div className="hidden md:flex items-center gap-6 justify-between w-full max-w-4xl lg:max-w-5xl xl:max-w-6xl px-4 py-3 border-b border-zinc-200 dark:border-zinc-850 mb-6 font-mono text-xs text-zinc-500 shrink-0">

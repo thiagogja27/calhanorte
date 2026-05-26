@@ -51,11 +51,13 @@ body {
   background: var(--dk);
 }
 
-/* Class to completely hide scrollbars but preserve scrolling motion */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+/* Class to completely hide scrollbars but preserve scrolling motion on touch devices */
+@media (max-width: 767px) {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
 }
