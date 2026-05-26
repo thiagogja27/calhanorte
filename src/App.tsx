@@ -724,13 +724,13 @@ export default function App() {
       <div className="w-full md:max-w-4xl lg:max-w-5xl xl:max-w-6xl h-screen md:h-[85vh] bg-white dark:bg-zinc-950 md:rounded-[24px] md:shadow-2xl md:border border-zinc-200 dark:border-zinc-850 relative flex flex-col overflow-hidden transition-all duration-300">
         
         {/* Dynamic App Area inside Viewport */}
-        <div className={`flex-grow flex flex-col overflow-y-auto no-scrollbar relative transition-colors duration-300 ${
+        <div className={`flex-grow flex flex-col overflow-hidden relative transition-colors duration-300 ${
           darkMode ? 'bg-zinc-950 text-white' : 'bg-stone-50 text-stone-900'
         }`}>
           
           {/* USER NOT AUTHENTICATED: Native Phone Form Login */}
           {!user ? (
-            <div className="flex-grow flex flex-col p-6 justify-center items-center">
+            <div className="flex-grow flex flex-col p-6 justify-center items-center overflow-y-auto">
               <div className="text-center space-y-2 mb-6">
                 <div className="w-14 h-14 bg-amber-400 rounded-2xl flex items-center justify-center mx-auto shadow-md">
                   <SquareTerminal className="w-8 h-8 text-slate-900 stroke-[2.5]" />
@@ -843,7 +843,7 @@ export default function App() {
               )}
 
               {/* VIEWPORT CONTROLLER SWITCHBOARD */}
-              <div className="flex-grow p-4 pb-20">
+              <div className="flex-grow overflow-y-auto p-4 pb-6 no-scrollbar">
 
                 {/* TAB 1: Dashboard Home Tab */}
                 {viewportTab === 'home' && (
@@ -2356,7 +2356,7 @@ export default function App() {
               </div>
 
               {/* PERSISTENT MOBILE BOTTOM NAVIGATION TAB BAR (Exactly matching screen layouts) */}
-              <div className={`absolute bottom-0 left-0 w-full px-5 py-2.5 flex justify-between items-center z-30 border-t ${
+              <div className={`sticky bottom-0 left-0 w-full px-5 py-2.5 flex justify-between items-center z-30 shrink-0 border-t ${
                 darkMode ? 'bg-zinc-950 border-zinc-900' : 'bg-white border-zinc-200'
               }`}>
                 

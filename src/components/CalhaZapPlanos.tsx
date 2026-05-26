@@ -65,33 +65,33 @@ export default function CalhaZapPlanos({ verificarAtivo, ativarAcessoPlano }: Ca
 
   return (
     <div className="space-y-6">
-      <div className="bg-[#f2f3f4] rounded-2xl border border-[#b0b2b5] p-5 shadow-sm space-y-4">
-        <h3 className="text-sm font-extrabold text-[#5a5c5f] uppercase tracking-wider flex items-center gap-2 border-l-4 border-[#f5c800] pl-2">
+      <div className="bg-zinc-100 dark:bg-zinc-900/40 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 shadow-sm space-y-4">
+        <h3 className="text-sm font-extrabold text-[#5a5c5f] dark:text-zinc-300 uppercase tracking-wider flex items-center gap-2 border-l-4 border-[#f5c800] pl-2">
           ⭐ Escolha seu Plano Premium
         </h3>
 
-        <div className="bg-[#5a5c5f] rounded-xl p-4 text-white space-y-3 relative overflow-hidden">
+        <div className="bg-[#5a5c5f] dark:bg-zinc-850/90 rounded-xl p-4 text-white space-y-3 relative overflow-hidden">
           <div className="flex justify-between items-center z-10 relative">
             <div>
-              <span className="text-sm font-black text-[#f5c800] font-condensed tracking-wide">
+              <span className="text-sm font-black text-[#f5c800] dark:text-amber-400 font-condensed tracking-wide">
                 10 DIAS TOTALMENTE GRÁTIS
               </span>
-              <p className="text-[11px] text-zinc-300 font-bold">
+              <p className="text-[11px] text-zinc-350 font-bold">
                 Ative o período de testes grátis e cancele quando quiser.
               </p>
             </div>
-            <span className="bg-[#f5c800] text-[#5a5c5f] text-[9px] font-black tracking-widest px-2 py-0.5 rounded uppercase">
+            <span className="bg-[#f5c800] text-zinc-900 text-[9px] font-black tracking-widest px-2 py-0.5 rounded uppercase">
               TRIAL
             </span>
           </div>
 
-          <div className="grid grid-cols-3 text-center border-t border-[#8a8c8f] pt-3 z-10 relative text-[10px]">
+          <div className="grid grid-cols-3 text-center border-t border-[#8a8c8f] dark:border-zinc-700 pt-3 z-10 relative text-[10px]">
             <div>
-              <div className="font-bold text-[#f5c800]">Hoje</div>
+              <div className="font-bold text-[#f5c800] dark:text-amber-400">Hoje</div>
               <div className="text-zinc-300">Ativação Grátis</div>
             </div>
-            <div className="border-x border-[#8a8c8f]">
-              <div className="font-bold text-[#f5c800]">Dias 1–10</div>
+            <div className="border-x border-[#8a8c8f] dark:border-zinc-700">
+              <div className="font-bold text-[#f5c800] dark:text-amber-400">Dias 1–10</div>
               <div className="text-zinc-300">Acesso Premium</div>
             </div>
             <div>
@@ -109,14 +109,16 @@ export default function CalhaZapPlanos({ verificarAtivo, ativarAcessoPlano }: Ca
               setParcSel(0);
             }}
             className={`cursor-pointer rounded-xl border p-4 text-center transition ${
-              selectedPlan === 'mensal' ? 'border-[#e0b400] bg-[#fff9c4]' : 'border-[#b0b2b5] bg-white'
+              selectedPlan === 'mensal' 
+                ? 'border-[#e0b400] bg-amber-50 dark:bg-amber-950/20 text-zinc-900 dark:text-amber-100' 
+                : 'border-zinc-250 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-650 dark:text-zinc-400'
             }`}
           >
-            <span className="text-[9px] uppercase font-bold text-[#6a6a6a]">Mensal</span>
-            <div className="text-2xl font-black text-[#1a1a1a] mt-1 font-condensed">
+            <span className="text-[9px] uppercase font-bold text-zinc-500 dark:text-zinc-400">Mensal</span>
+            <div className="text-2xl font-black text-zinc-900 dark:text-zinc-100 mt-1 font-condensed">
               R$ 49<span className="text-sm font-bold">,90</span>
             </div>
-            <span className="text-[10px] text-[#6a6a6a] font-semibold">/ mês</span>
+            <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-semibold">/ mês</span>
           </div>
 
           {/* SEMESTRAL */}
@@ -126,18 +128,20 @@ export default function CalhaZapPlanos({ verificarAtivo, ativarAcessoPlano }: Ca
               setParcSel(0);
             }}
             className={`cursor-pointer rounded-xl border p-4 text-center transition relative ${
-              selectedPlan === 'semestral' ? 'border-[#e0b400] bg-[#fff9c4]' : 'border-[#b0b2b5] bg-white'
+              selectedPlan === 'semestral' 
+                ? 'border-[#e0b400] bg-amber-50 dark:bg-amber-950/20 text-zinc-900 dark:text-amber-100' 
+                : 'border-zinc-250 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-650 dark:text-zinc-400'
             }`}
           >
-            <span className="absolute top-[-9px] left-1/2 -translate-x-1/2 bg-[#5a5c5f] text-[#f5c800] text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded">
+            <span className="absolute top-[-9px] left-1/2 -translate-x-1/2 bg-[#5a5c5f] dark:bg-zinc-750 text-[#f5c800] dark:text-amber-400 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded">
               POPULAR
             </span>
-            <span className="text-[9px] uppercase font-bold text-[#6a6a6a]">Semestral</span>
-            <div className="text-2xl font-black text-[#1a1a1a] mt-1 font-condensed">
+            <span className="text-[9px] uppercase font-bold text-zinc-500 dark:text-zinc-400">Semestral</span>
+            <div className="text-2xl font-black text-zinc-900 dark:text-zinc-100 mt-1 font-condensed">
               R$ 39<span className="text-sm font-bold">,90</span>
             </div>
-            <span className="text-[10px] text-[#6a6a6a] font-semibold">/ mês (R$239,40)</span>
-            <div className="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 mt-2 rounded inline-block">
+            <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-semibold">/ mês (R$239,40)</span>
+            <div className="text-[9px] font-bold text-emerald-700 dark:text-emerald-350 bg-emerald-100 dark:bg-emerald-950/40 px-1.5 py-0.5 mt-2 rounded inline-block">
               ECONOMIZE 20%
             </div>
           </div>
@@ -149,21 +153,23 @@ export default function CalhaZapPlanos({ verificarAtivo, ativarAcessoPlano }: Ca
               setParcSel(0);
             }}
             className={`cursor-pointer rounded-xl border p-4 text-center transition ${
-              selectedPlan === 'anual' ? 'border-[#e0b400] bg-[#fff9c4]' : 'border-[#b0b2b5] bg-white'
+              selectedPlan === 'anual' 
+                ? 'border-[#e0b400] bg-amber-50 dark:bg-amber-950/20 text-zinc-900 dark:text-amber-100' 
+                : 'border-zinc-250 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-650 dark:text-zinc-400'
             }`}
           >
-            <span className="text-[9px] uppercase font-bold text-[#6a6a6a]">Anual</span>
-            <div className="text-2xl font-black text-[#1a1a1a] mt-1 font-condensed">
+            <span className="text-[9px] uppercase font-bold text-zinc-500 dark:text-zinc-400">Anual</span>
+            <div className="text-2xl font-black text-zinc-900 dark:text-zinc-100 mt-1 font-condensed">
               R$ 29<span className="text-sm font-bold">,90</span>
             </div>
-            <span className="text-[10px] text-[#6a6a6a] font-semibold">/ mês (R$358,80)</span>
-            <div className="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 mt-2 rounded inline-block">
+            <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-semibold">/ mês (R$358,80)</span>
+            <div className="text-[9px] font-bold text-emerald-700 dark:text-emerald-355 bg-emerald-100 dark:bg-emerald-950/40 px-1.5 py-0.5 mt-2 rounded inline-block">
               ECONOMIZE 40%
             </div>
           </div>
         </div>
 
-        <div className="p-3 bg-[#c8c9cb] border border-[#b0b2b5] rounded-xl text-center text-xs font-bold text-[#3a3a3a]">
+        <div className="p-3 bg-zinc-200 dark:bg-zinc-800 border border-zinc-250 dark:border-zinc-705 rounded-xl text-center text-xs font-bold text-zinc-750 dark:text-zinc-350">
           {selectedPlan === 'mensal' && 'Cobrança Mensal recorrente direta: R$ 49,90'}
           {selectedPlan === 'semestral' && 'Cobrança Semestral total recorrente: R$ 239,40'}
           {selectedPlan === 'anual' && 'Cobrança Anual total recorrente: R$ 358,80'}
@@ -171,51 +177,54 @@ export default function CalhaZapPlanos({ verificarAtivo, ativarAcessoPlano }: Ca
       </div>
 
       {curPl.parcelas.length > 1 && (
-        <div className="bg-[#f2f3f4] rounded-2xl border border-[#b0b2b5] p-4 shadow-sm">
-          <span className="text-xs font-bold text-[#5a5c5f] uppercase tracking-wider block mb-3">
+        <div className="bg-zinc-100 dark:bg-zinc-900/40 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 shadow-sm">
+          <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider block mb-3">
             💳 Parcelamento de Faturamento (Sem Juros)
           </span>
           <div className="grid grid-cols-2 gap-2">
             {curPl.parcelas.map((parc, index) => (
               <button
                 key={index}
+                type="button"
                 onClick={() => setParcSel(index)}
-                className={`py-2 px-3 border rounded-xl font-bold flex flex-col justify-center items-center transition ${
-                  parcSel === index ? 'border-[#e0b400] bg-[#fff9c4]' : 'border-[#b0b2b5] bg-white'
+                className={`py-2 px-3 border rounded-xl font-bold flex flex-col justify-center items-center transition cursor-pointer ${
+                  parcSel === index 
+                    ? 'border-[#e0b400] bg-amber-50 dark:bg-amber-950/20' 
+                    : 'border-zinc-250 dark:border-zinc-800 bg-white dark:bg-zinc-900'
                 }`}
               >
-                <div className="text-[10px] text-[#6a6a6a]">{parc.n}x</div>
-                <div className="text-base font-black text-[#5a5c5f] font-condensed">
+                <div className="text-[10px] text-zinc-500 dark:text-zinc-400">{parc.n}x</div>
+                <div className="text-base font-black text-zinc-850 dark:text-zinc-150 font-condensed">
                   R$ {parc.v.toFixed(2)}
                 </div>
-                <div className="text-[9px] text-zinc-500 font-bold">{parc.desc}</div>
+                <div className="text-[9px] text-zinc-500 dark:text-zinc-400 font-bold">{parc.desc}</div>
               </button>
             ))}
           </div>
         </div>
       )}
 
-      <form onSubmit={handleCheckoutSubmit} className="bg-white rounded-2xl border border-[#b0b2b5] p-5 space-y-4 shadow-sm">
-        <h4 className="font-extrabold text-sm text-[#1a1a1a] flex items-center gap-1.5 border-b border-[#b0b2b5] pb-2 text-[#5a5c5f] uppercase tracking-wider">
+      <form onSubmit={handleCheckoutSubmit} className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-250 dark:border-zinc-805 p-5 space-y-4 shadow-sm">
+        <h4 className="font-extrabold text-sm flex items-center gap-1.5 border-b border-zinc-200 dark:border-zinc-800 pb-2 text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
           🔒 Ativação Segura em 10 Segundos
         </h4>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-bold text-[#3a3a3a]">Seu Endereço de E-mail de Faturamento</label>
+          <label className="text-xs font-bold text-zinc-650 dark:text-zinc-450">Seu Endereço de E-mail de Faturamento</label>
           <input
             type="email"
             value={emailInput}
             onChange={(e) => setEmailInput(e.target.value)}
             placeholder="informe seu e-mail"
-            className="w-full bg-[#f2f3f4] border border-[#b0b2b5] rounded-xl px-4 py-2.5 text-sm font-semibold text-[#1a1a1a] outline-none"
+            className="w-full bg-zinc-100 dark:bg-zinc-950 border border-zinc-250 dark:border-zinc-800 rounded-xl px-4 py-2.5 text-sm font-semibold text-zinc-800 dark:text-zinc-200 outline-none"
             required
           />
-          <span className="text-[10px] text-[#6a6a6a] font-normal block leading-tight">
+          <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-normal block leading-tight">
             Seus cupons, notas de faturamento e chaves de licença Stripe serão despachados com exclusividade para este endereço de correspondência física.
           </span>
         </div>
 
-        <div className="bg-[#fff9c4] rounded-lg p-3 text-xs leading-normal font-bold text-[#5a4400] space-y-1">
+        <div className="bg-amber-50 dark:bg-amber-950/40 rounded-lg p-3 text-xs leading-normal font-bold text-amber-850 dark:text-amber-250 space-y-1 border border-amber-200/50 dark:border-amber-800/40">
           <div>📝 Extrato do Checkout Hoje:</div>
           <div className="font-medium">
             ✅ R$ 0,00 Cobrado Imediatamente (Trial de 10 dias ativo)<br />
@@ -232,17 +241,17 @@ export default function CalhaZapPlanos({ verificarAtivo, ativarAcessoPlano }: Ca
 
         <button
           type="submit"
-          className="w-full bg-[#f5c800] border-2 border-[#e0b400] hover:bg-[#e0b400] py-3.5 px-4 font-black text-sm text-[#5a5c5f] rounded-xl transition flex items-center justify-center gap-2 shadow cursor-pointer shadow-amber-500/10"
+          className="w-full bg-[#f5c800] border-2 border-[#e0b400] hover:bg-[#e0b400] py-3.5 px-4 font-black text-sm text-zinc-900 rounded-xl transition flex items-center justify-center gap-2 shadow cursor-pointer shadow-amber-500/10"
         >
           <CreditCard className="w-5 h-5 shrink-0" />
           <span>Ativar Trial de 10 Dias Grátis no Stripe</span>
         </button>
 
-        <div className="text-[10px] text-[#6a6a6a] text-center max-w-sm mx-auto leading-relaxed pt-2">
+        <div className="text-[10px] text-zinc-500 dark:text-zinc-400 text-center max-w-sm mx-auto leading-relaxed pt-2">
           Stripe® Payment Links — Criptografia de nível bancário TLS 1.3 / Padrão PCI-DSS Nível 1. Seus dados de cartão financeiro nunca trafegam por nossos ambientes servidores.
         </div>
 
-        <div className="flex gap-4 justify-center items-center text-[10px] font-bold text-[#8a8c8f] shrink-0 border-t border-[#b0b2b5] pt-3">
+        <div className="flex gap-4 justify-center items-center text-[10px] font-bold text-zinc-400 dark:text-zinc-500 shrink-0 border-t border-zinc-200 dark:border-zinc-800 pt-3">
           <div className="flex items-center gap-1">
             <Lock className="w-3.5 h-3.5" />
             <span>CRIPTO SSL</span>

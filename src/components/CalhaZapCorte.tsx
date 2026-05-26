@@ -61,17 +61,17 @@ export default function CalhaZapCorte({ verificarAtivo, exibirLock }: CalhaZapCo
 
   return (
     <div className="space-y-6">
-      <div className="bg-[#f2f3f4] rounded-2xl border border-[#b0b2b5] p-5 shadow-sm">
-        <h3 className="text-sm font-extrabold text-[#5a5c5f] uppercase tracking-wider mb-4 flex items-center gap-2 border-l-4 border-[#f5c800] pl-2">
+      <div className="bg-zinc-100 dark:bg-zinc-900/40 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 shadow-sm">
+        <h3 className="text-sm font-extrabold text-[#5a5c5f] dark:text-zinc-300 uppercase tracking-wider mb-4 flex items-center gap-2 border-l-4 border-[#f5c800] pl-2">
           🏭 Dados da Bobina Mãe
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-[#3a3a3a]">Material Comercial</label>
+            <label className="text-xs font-bold text-zinc-650 dark:text-zinc-400">Material Comercial</label>
             <select
               value={bMat}
               onChange={(e) => setBMat(e.target.value)}
-              className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-sm outline-none"
+              className="w-full bg-white dark:bg-zinc-900 border border-zinc-250 dark:border-zinc-800 rounded-xl px-3 py-2 text-xs text-zinc-800 dark:text-zinc-100 font-bold outline-none"
             >
               <option>Galvalume #26</option>
               <option>Galvalume #28</option>
@@ -83,28 +83,29 @@ export default function CalhaZapCorte({ verificarAtivo, exibirLock }: CalhaZapCo
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-[#3a3a3a]">Peso Total Bobina (kg)</label>
+            <label className="text-xs font-bold text-zinc-650 dark:text-zinc-400">Peso Total Bobina (kg)</label>
             <input
               type="number"
               value={bPeso || ""}
               onChange={(e) => setBPeso(Math.max(0, parseFloat(e.target.value) || 0))}
               placeholder="Ex: 335"
-              className="w-full bg-white border border-[#b0b2b5] rounded-xl px-3 py-2 text-sm outline-none"
+              className="w-full bg-white dark:bg-zinc-900 border border-zinc-250 dark:border-zinc-800 rounded-xl px-3 py-2 text-sm text-zinc-800 dark:text-zinc-100 font-extrabold outline-none"
             />
           </div>
         </div>
 
         <div className="space-y-1.5 mt-4">
-          <label className="text-xs font-bold text-[#3a3a3a]">Largura Nominal da Bobina (mm)</label>
+          <label className="text-xs font-bold text-zinc-650 dark:text-zinc-400">Largura Nominal da Bobina (mm)</label>
           <div className="flex gap-2 flex-wrap">
             {['1200', '1000', '900', 'Outra'].map((preset) => (
               <button
                 key={preset}
+                type="button"
                 onClick={() => setBLMode(preset as any)}
-                className={`flex-1 py-2 px-3 text-xs font-bold border rounded-lg transition ${
+                className={`flex-1 py-2 px-3 text-xs font-bold border rounded-lg transition cursor-pointer ${
                   bLMode === preset
-                    ? 'border-[#e0b400] bg-[#f5c800] text-[#5a5c5f]'
-                    : 'border-[#b0b2b5] bg-white text-[#6a6a6a]'
+                    ? 'border-[#e0b400] bg-[#f5c800] text-zinc-900'
+                    : 'border-zinc-250 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300'
                 }`}
               >
                 {preset}
@@ -117,14 +118,14 @@ export default function CalhaZapCorte({ verificarAtivo, exibirLock }: CalhaZapCo
               value={bLCust || ""}
               onChange={(e) => setBLCust(Math.max(0, parseInt(e.target.value) || 0))}
               placeholder="Largura em mm"
-              className="w-full bg-white border border-[#b0b2b5] mt-2 rounded-xl px-3 py-2 text-sm outline-none"
+              className="w-full bg-white dark:bg-zinc-900 border border-zinc-250 dark:border-zinc-800 mt-2 rounded-xl px-3 py-2 text-sm text-zinc-805 dark:text-zinc-100 font-bold outline-none"
             />
           )}
         </div>
       </div>
 
       {bMat.includes('Alumínio') && (
-        <div className="bg-sky-50 border border-sky-200 text-sky-900 rounded-xl p-3.5 text-xs flex gap-2.5">
+        <div className="bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-900/50 text-sky-900 dark:text-sky-300 rounded-xl p-3.5 text-xs flex gap-2.5">
           <div className="text-lg">ℹ️</div>
           <div>
             <strong>Alumínio:</strong> Coeficiente 2,7 kg/dm³ — consideravelmente mais leve que o aço (8,0 kg/dm³). O comprimento de metros lineares de tira será consideravelmente maior para o mesmo peso configurado.
@@ -132,11 +133,11 @@ export default function CalhaZapCorte({ verificarAtivo, exibirLock }: CalhaZapCo
         </div>
       )}
 
-      <div className="bg-[#f2f3f4] rounded-2xl border border-[#b0b2b5] p-5 shadow-sm">
-        <h3 className="text-sm font-extrabold text-[#5a5c5f] uppercase tracking-wider mb-3 flex items-center gap-2 border-l-4 border-[#f5c800] pl-2">
+      <div className="bg-zinc-100 dark:bg-zinc-900/40 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-5 shadow-sm">
+        <h3 className="text-sm font-extrabold text-[#5a5c5f] dark:text-zinc-300 uppercase tracking-wider mb-3 flex items-center gap-2 border-l-4 border-[#f5c800] pl-2">
           ✂️ Relação de Fitas (Espaçamento)
         </h3>
-        <p className="text-[11px] text-[#6a6a6a] font-semibold mb-4">
+        <p className="text-[11px] text-[#6a6a6a] dark:text-zinc-400 font-semibold mb-4">
           Defina as larguras das fitas de corte em <strong>milímetros (mm)</strong>. A soma das fitas deve ser menor ou igual a {lt}mm.
         </p>
 
@@ -218,18 +219,18 @@ export default function CalhaZapCorte({ verificarAtivo, exibirLock }: CalhaZapCo
       </div>
 
       {totalCutsWidth > 0 && totalCutsWidth <= lt && (
-        <div className="bg-white rounded-2xl border border-[#b0b2b5] p-5 shadow-sm">
-          <h3 className="text-xs font-black text-[#5a5c5f] uppercase tracking-wider mb-2">
+        <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-250 dark:border-zinc-805 p-5 shadow-sm">
+          <h3 className="text-xs font-black text-[#5a5c5f] dark:text-zinc-300 uppercase tracking-wider mb-2">
             📊 Resumo do Corte Slitting
           </h3>
           <table className="w-full text-xs text-left border-collapse">
             <thead>
-              <tr className="bg-[#5a5c5f] text-[#f5c800] uppercase text-[10px]">
-                <th className="p-2 border border-[#b0b2b5]">Fita / Corte</th>
-                <th className="p-2 border border-[#b0b2b5] text-center">Larg. (mm)</th>
-                <th className="p-2 border border-[#b0b2b5] text-right">Peso Est.</th>
-                <th className="p-2 border border-[#b0b2b5] text-right">M. Lineares</th>
-                <th className="p-2 border border-[#b0b2b5] text-right">%</th>
+              <tr className="bg-[#5a5c5f] dark:bg-zinc-800 text-[#f5c800] dark:text-amber-400 uppercase text-[10px]">
+                <th className="p-2 border border-zinc-250 dark:border-zinc-700">Fita / Corte</th>
+                <th className="p-2 border border-zinc-250 dark:border-zinc-700 text-center">Larg. (mm)</th>
+                <th className="p-2 border border-zinc-250 dark:border-zinc-700 text-right">Peso Est.</th>
+                <th className="p-2 border border-zinc-250 dark:border-zinc-700 text-right">M. Lineares</th>
+                <th className="p-2 border border-zinc-250 dark:border-zinc-700 text-right">%</th>
               </tr>
             </thead>
             <tbody>
@@ -237,36 +238,36 @@ export default function CalhaZapCorte({ verificarAtivo, exibirLock }: CalhaZapCo
                 if (wVal <= 0) return null;
                 const calc = cutsCalculated[i];
                 return (
-                  <tr key={i} className="border-b border-[#b0b2b5] hover:bg-[#f2f3f4]">
-                    <td className="p-2 font-bold flex items-center gap-1.5 text-[#3a3a3a]">
+                  <tr key={i} className="border-b border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/40">
+                    <td className="p-2 font-bold flex items-center gap-1.5 text-zinc-800 dark:text-zinc-200">
                       <div className="w-2.5 h-2.5 rounded" style={{ backgroundColor: colors[i] }}></div>
                       <span>Corte {i + 1}</span>
                     </td>
-                    <td className="p-2 border border-[#b0b2b5] text-center font-mono">{wVal}</td>
-                    <td className="p-2 border border-[#b0b2b5] text-right font-mono font-bold">
+                    <td className="p-2 border border-zinc-200 dark:border-zinc-800 text-center font-mono text-zinc-700 dark:text-zinc-300">{wVal}</td>
+                    <td className="p-2 border border-zinc-200 dark:border-zinc-800 text-right font-mono font-bold text-zinc-805 dark:text-zinc-100">
                       {calc.weight > 0 ? `${calc.weight.toFixed(1)} kg` : '—'}
                     </td>
-                    <td className="p-2 border border-[#b0b2b5] text-right font-mono text-[#2e7d32]">
+                    <td className="p-2 border border-zinc-200 dark:border-zinc-800 text-right font-mono text-[#2e7d32] dark:text-emerald-400">
                       {calc.length > 0 ? `${calc.length.toFixed(1)} m` : '—'}
                     </td>
-                    <td className="p-2 border border-[#b0b2b5] text-right font-mono text-[#6a6a6a]">
+                    <td className="p-2 border border-zinc-200 dark:border-zinc-800 text-right font-mono text-zinc-500 dark:text-zinc-400">
                       {calc.pct.toFixed(1)}%
                     </td>
                   </tr>
                 );
               })}
-              <tr className="bg-[#f2f3f4] font-bold text-[#1a1a1a]">
-                <td className="p-2 border border-[#b0b2b5]">TOTAL GERAL</td>
-                <td className="p-2 border border-[#b0b2b5] text-center font-mono">{totalCutsWidth}</td>
-                <td className="p-2 border border-[#b0b2b5] text-right font-mono">
+              <tr className="bg-zinc-100 dark:bg-zinc-950 font-bold text-zinc-900 dark:text-zinc-150">
+                <td className="p-2 border border-zinc-200 dark:border-zinc-800">TOTAL GERAL</td>
+                <td className="p-2 border border-zinc-200 dark:border-zinc-800 text-center font-mono">{totalCutsWidth}</td>
+                <td className="p-2 border border-zinc-200 dark:border-zinc-800 text-right font-mono">
                   {bPeso > 0 ? `${((totalCutsWidth / lt) * bPeso).toFixed(1)} kg` : '—'}
                 </td>
-                <td className="p-2 border border-[#b0b2b5] text-right font-mono text-[#2e7d32]">
+                <td className="p-2 border border-zinc-200 dark:border-zinc-800 text-right font-mono text-[#2e7d32] dark:text-emerald-400">
                   {cutsCalculated.some(c => c.length > 0)
                     ? `${cutsCalculated.reduce((a, b) => a + b.length, 0).toFixed(1)} m`
                     : '—'}
                 </td>
-                <td className="p-2 border border-[#b0b2b5] text-right font-mono">
+                <td className="p-2 border border-zinc-200 dark:border-zinc-800 text-right font-mono">
                   {((totalCutsWidth / lt) * 100).toFixed(1)}%
                 </td>
               </tr>
